@@ -33,6 +33,62 @@ $_SESSION['adminName'] = $_SESSION['adminFN'] . " " . $_SESSION['adminLN'];
 $sweetAlertConfig = "";
 
 
+// Check if this is an AJAX request for filtered data
+if(isset($_GET['ajax']) && $_GET['ajax'] == 'filter') {
+  header('Content-Type: application/json');
+  
+  try {
+    $timePeriod = $_GET['timePeriod'] ?? 'day';
+    $orderStatus = $_GET['orderStatus'] ?? '';
+    $claimStatus = $_GET['claimStatus'] ?? '';
+    $paymentStatus = $_GET['paymentStatus'] ?? '';
+    $searchTerm = $_GET['searchTerm'] ?? '';
+    
+    $transactions = $con->getFilteredTransactions($timePeriod, $orderStatus, $claimStatus, $paymentStatus, $searchTerm);
+    
+    // Format the data for JSON response
+    $response = [];
+    foreach ($transactions as $transaction) {
+      $status = strtolower($transaction['Status']);
+      $badgeClass = 'in-progress'; // default
+      
+      // Color coding based on status
+      if ($status === 'completed') $badgeClass = 'completed';
+      else if ($status === 'cancelled') $badgeClass = 'cancelled';
+      else if ($status === 'in progress' || $status === 'pending') $badgeClass = 'in-progress';
+      
+      // For claim and payment status
+      $claimStatusValue = isset($transaction['ClaimStatus']) ? $transaction['ClaimStatus'] : '1';
+      $paymentStatusValue = isset($transaction['PaymentStatus']) ? $transaction['PaymentStatus'] : '1';
+      
+      $claimBadgeClass = ($claimStatusValue == '2') ? 'claimed' : 'unclaimed';
+      $paymentBadgeClass = ($paymentStatusValue == '2') ? 'paid' : 'unpaid';
+      
+      $response[] = [
+        'TransactionID' => $transaction['TransactionID'],
+        'CustomerName' => $transaction['CustomerName'],
+        'FormattedDate' => $transaction['FormattedDate'],
+        'Services' => $transaction['Services'],
+        'Status' => $transaction['Status'],
+        'StatusID' => $transaction['StatusID'],
+        'ClaimStatus' => $claimStatusValue,
+        'PaymentStatus' => $paymentStatusValue,
+        'TransacTotalAmount' => $transaction['TransacTotalAmount'],
+        'badgeClass' => $badgeClass,
+        'claimBadgeClass' => $claimBadgeClass,
+        'paymentBadgeClass' => $paymentBadgeClass
+      ];
+    }
+    
+    echo json_encode(['success' => true, 'data' => $response]);
+  } catch (Exception $e) {
+    error_log("Error in orderList.php AJAX endpoint: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+  }
+  exit();
+}
+
 // Check if the form is submitted
 if(isset($_POST['updateStatusButton'])) {
 
@@ -181,19 +237,59 @@ if(isset($_POST['updateStatusButton'])) {
       
       /* Status Type Button Styling */
       .status-type-btn {
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         border-width: 2px;
         font-weight: 600;
+        position: relative;
+        overflow: hidden;
       }
       
-      .status-type-btn.active {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        transform: translateY(-1px);
+      /* Default state - outline with subtle background */
+      .status-type-btn:not(.active) {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        color: rgba(255, 255, 255, 0.7) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       
+      /* Hover state for inactive buttons */
       .status-type-btn:not(.active):hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+      }
+      
+      /* Active state - filled with vibrant colors */
+      .status-type-btn.active {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        border-color: transparent !important;
+        color: white !important;
+      }
+      
+      /* Order Status Button - Blue */
+      .status-type-btn.active[data-type="status"] {
+        background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+        box-shadow: 0 6px 12px rgba(13, 110, 253, 0.4);
+      }
+      
+      /* Claim Status Button - Green */
+      .status-type-btn.active[data-type="claim"] {
+        background: linear-gradient(135deg, #198754, #146c43) !important;
+        box-shadow: 0 6px 12px rgba(25, 135, 84, 0.4);
+      }
+      
+      /* Payment Status Button - Orange/Yellow */
+      .status-type-btn.active[data-type="payment"] {
+        background: linear-gradient(135deg, #fd7e14, #e55a0e) !important;
+        box-shadow: 0 6px 12px rgba(253, 126, 20, 0.4);
+      }
+      
+      /* Button press animation */
+      .status-type-btn:active {
+        transform: translateY(-1px);
+        transition: transform 0.1s ease;
       }
       
       /* Make buttons responsive */
@@ -206,6 +302,76 @@ if(isset($_POST['updateStatusButton'])) {
         .status-type-btn i {
           display: none;
         }
+        
+        .status-type-btn.active {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+      }
+      
+      /* Filter controls styling - Translucent/Glassy White */
+      .form-control, .form-select {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      .form-control:focus, .form-select:focus {
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.15), 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        color: #ffffff !important;
+      }
+      
+      .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.7) !important;
+        opacity: 1 !important;
+      }
+      
+      .form-select option {
+        background: rgba(40, 44, 52, 0.95) !important;
+        color: #ffffff !important;
+        backdrop-filter: blur(10px) !important;
+      }
+      
+      .form-select option:hover, .form-select option:checked {
+        background: rgba(186, 235, 230, 0.2) !important;
+        color: #ffffff !important;
+      }
+      
+      .input-group-text {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+      }
+      
+      /* Loading and state styling */
+      .spinner-border {
+        width: 2rem;
+        height: 2rem;
+      }
+      
+      .empty-state, .error-state {
+        color: rgba(255, 255, 255, 0.8);
+      }
+      
+      .empty-state i, .error-state i {
+        opacity: 0.6;
+      }
+      
+      /* Smooth transitions for table updates */
+      #transactionTableBody {
+        transition: opacity 0.2s ease;
+      }
+      
+      #transactionTableBody.loading {
+        opacity: 0.7;
       }
     </style>
   </head>
@@ -243,8 +409,66 @@ if(isset($_POST['updateStatusButton'])) {
             <i class="fas fa-arrow-left me-1"></i>Back
           </button>
         </div>
+        
+        <!-- Search and Filter Controls -->
+        <div class="row mb-4">
+          <!-- Search Bar -->
+          <div class="col-md-4 mb-3">
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="fas fa-search"></i>
+              </span>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="searchInput" 
+                placeholder="Search by Customer Name..."
+              >
+            </div>
+          </div>
+          
+          <!-- Time Period Filter -->
+          <div class="col-md-3 mb-3">
+            <select class="form-select" id="timePeriodFilter">
+              <option value="all">All Transactions</option>
+              <option value="year">This Year</option>
+              <option value="month">This Month</option>
+              <option value="week">This Week</option>
+              <option value="day" selected>Today</option>
+            </select>
+          </div>
+          
+          <!-- Order Status Filter -->
+          <div class="col-md-2 mb-3">
+            <select class="form-select" id="orderStatusFilter">
+              <option value="" selected>All Laundry Statuses</option>
+              <option value="1">In Progress</option>
+              <option value="2">Completed</option>
+              <option value="3">Cancelled</option>
+            </select>
+          </div>
+          
+          <!-- Claim Status Filter -->
+          <div class="col-md-2 mb-3">
+            <select class="form-select" id="claimStatusFilter">
+              <option value="" selected>All Claim Statuses</option>
+              <option value="1">Unclaimed</option>
+              <option value="2">Claimed</option>
+            </select>
+          </div>
+          
+          <!-- Payment Status Filter -->
+          <div class="col-md-1 mb-3">
+            <select class="form-select" id="paymentStatusFilter">
+              <option value="" selected>All Payment Statuses</option>
+              <option value="1">Unpaid</option>
+              <option value="2">Paid</option>
+            </select>
+          </div>
+        </div>
+        
         <div class="orders table-responsive">
-          <table class="transaction-table align-middle" id="ordersTable">
+          <table class="transaction-table align-middle" id="orderTable">
             <thead>
               <tr>
                 <th scope="col">ID</th>
@@ -257,9 +481,10 @@ if(isset($_POST['updateStatusButton'])) {
                 <th scope="col">Total</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="transactionTableBody">
               <?php
-              $transactions = $con->getAllTransactions();
+              // Load initial data with default filter (today's transactions)
+              $transactions = $con->getFilteredTransactions('day', '', '', '', '');
               foreach ($transactions as $transaction) {
                 $status = strtolower($transaction['Status']);
                 $badgeClass = 'in-progress'; // default
@@ -284,12 +509,12 @@ if(isset($_POST['updateStatusButton'])) {
                   <td><?php echo $transaction['FormattedDate']; ?></td>
                   <td><?php echo $transaction['Services']; ?></td>
                   <td>
-                    <span class="glass-badge <?php echo $badgeClass; ?>">
+                    <span class="glass-badge <?php echo $badgeClass; ?>" data-status="<?php echo $transaction['StatusID']; ?>">
                       <?php echo $transaction['Status']; ?>
                     </span>
                   </td>
                   <td>
-                    <span class="glass-badge <?php echo $claimBadgeClass; ?>">
+                    <span class="glass-badge <?php echo $claimBadgeClass; ?>" data-status="<?php echo isset($transaction['ClaimStatus']) ? $transaction['ClaimStatus'] : '1'; ?>">
                       <?php 
                       if (isset($transaction['ClaimStatus'])) {
                         if ($transaction['ClaimStatus'] == '1') {
@@ -306,7 +531,7 @@ if(isset($_POST['updateStatusButton'])) {
                     </span>
                   </td>
                   <td>
-                    <span class="glass-badge <?php echo $paymentBadgeClass; ?>">
+                    <span class="glass-badge <?php echo $paymentBadgeClass; ?>" data-status="<?php echo isset($transaction['PaymentStatus']) ? $transaction['PaymentStatus'] : '1'; ?>">
                       <?php 
                       if (isset($transaction['PaymentStatus'])) {
                         if ($transaction['PaymentStatus'] == '1') {
@@ -442,33 +667,15 @@ if(isset($_POST['updateStatusButton'])) {
         // Update hidden input
         document.getElementById('statusType').value = type;
         
-        // Update button states
+        // Remove active class from all buttons
         document.querySelectorAll('.status-type-btn').forEach(btn => {
           btn.classList.remove('active');
-          if (btn.classList.contains('btn-outline-primary')) {
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-outline-primary');
-          } else if (btn.classList.contains('btn-outline-success') || btn.classList.contains('btn-success')) {
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-outline-success');
-          } else if (btn.classList.contains('btn-outline-warning') || btn.classList.contains('btn-warning')) {
-            btn.classList.remove('btn-warning');
-            btn.classList.add('btn-outline-warning');
-          }
         });
         
-        // Activate selected button
+        // Add active class to selected button
         const selectedBtn = document.querySelector(`[data-type="${type}"]`);
-        selectedBtn.classList.add('active');
-        if (type === 'status') {
-          selectedBtn.classList.remove('btn-outline-primary');
-          selectedBtn.classList.add('btn-primary');
-        } else if (type === 'claim') {
-          selectedBtn.classList.remove('btn-outline-success');
-          selectedBtn.classList.add('btn-success');
-        } else if (type === 'payment') {
-          selectedBtn.classList.remove('btn-outline-warning');
-          selectedBtn.classList.add('btn-warning');
+        if (selectedBtn) {
+          selectedBtn.classList.add('active');
         }
         
         // Update status options
@@ -487,20 +694,182 @@ if(isset($_POST['updateStatusButton'])) {
           });
         });
         
-        document.querySelectorAll('.order-row').forEach(function(row) {
-          row.addEventListener('click', function() {
-            // Set transaction ID and current status in modal
-            document.getElementById('modalTransactionId').value = row.getAttribute('data-transaction-id');
+        // AJAX-based filter and search functionality
+        let filterTimeout;
+        let isLoading = false;
+        
+        function showLoadingState() {
+          if (isLoading) return;
+          isLoading = true;
+          
+          const tableBody = document.getElementById('transactionTableBody');
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="8" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-2">Loading transactions...</div>
+              </td>
+            </tr>
+          `;
+        }
+        
+        function showEmptyState() {
+          const tableBody = document.getElementById('transactionTableBody');
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="8" class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <div class="h5 text-muted">No transactions found</div>
+                <div class="text-muted">Try adjusting your filters or search criteria</div>
+              </td>
+            </tr>
+          `;
+        }
+        
+        function showErrorState() {
+          const tableBody = document.getElementById('transactionTableBody');
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="8" class="text-center py-4">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <div class="h5 text-warning">Error loading transactions</div>
+                <div class="text-muted">Please try again or contact support</div>
+              </td>
+            </tr>
+          `;
+        }
+        
+        function buildTransactionRow(transaction) {
+          return `
+            <tr class="order-row" 
+                data-transaction-id="${transaction.TransactionID}" 
+                data-status="${transaction.StatusID}">
+              <td>${transaction.TransactionID}</td>
+              <td>${transaction.CustomerName}</td>
+              <td>${transaction.FormattedDate}</td>
+              <td>${transaction.Services}</td>
+              <td>
+                <span class="glass-badge ${transaction.badgeClass}" data-status="${transaction.StatusID}">
+                  ${transaction.Status}
+                </span>
+              </td>
+              <td>
+                <span class="glass-badge ${transaction.claimBadgeClass}" data-status="${transaction.ClaimStatus || '1'}">
+                  ${transaction.ClaimStatus == '2' ? 'Claimed' : 'Unclaimed'}
+                </span>
+              </td>
+              <td>
+                <span class="glass-badge ${transaction.paymentBadgeClass}" data-status="${transaction.PaymentStatus || '1'}">
+                  ${transaction.PaymentStatus == '2' ? 'Paid' : 'Unpaid'}
+                </span>
+              </td>
+              <td>₱${parseFloat(transaction.TransacTotalAmount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            </tr>
+          `;
+        }
+        
+        function loadTransactions() {
+          // Clear any existing timeout
+          clearTimeout(filterTimeout);
+          
+          // Set a debounce timeout for search input
+          filterTimeout = setTimeout(() => {
+            showLoadingState();
             
-            // Reset to default status type (Order Status)
-            setStatusType('status');
-            document.getElementById('modalStatus').value = row.getAttribute('data-status');
+            const searchInput = document.getElementById('searchInput').value;
+            const timePeriodFilter = document.getElementById('timePeriodFilter').value;
+            const orderStatusFilter = document.getElementById('orderStatusFilter').value;
+            const claimStatusFilter = document.getElementById('claimStatusFilter').value;
+            const paymentStatusFilter = document.getElementById('paymentStatusFilter').value;
             
-            // Show modal
-            var modal = new bootstrap.Modal(document.getElementById('statusModal'));
-            modal.show();
+            // Build query parameters
+            const params = new URLSearchParams({
+              ajax: 'filter',
+              timePeriod: timePeriodFilter,
+              orderStatus: orderStatusFilter,
+              claimStatus: claimStatusFilter,
+              paymentStatus: paymentStatusFilter,
+              searchTerm: searchInput
+            });
+            
+            // Make AJAX request
+            fetch(`orderList.php?${params.toString()}`)
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+              })
+              .then(response => {
+                const tableBody = document.getElementById('transactionTableBody');
+                
+                if (!response.success) {
+                  throw new Error(response.error || 'Unknown error occurred');
+                }
+                
+                const data = response.data;
+                
+                if (data.length === 0) {
+                  showEmptyState();
+                } else {
+                  // Build table rows
+                  const rowsHTML = data.map(transaction => buildTransactionRow(transaction)).join('');
+                  tableBody.innerHTML = rowsHTML;
+                  
+                  // Re-attach event listeners to new rows
+                  attachRowEventListeners();
+                }
+                
+                isLoading = false;
+              })
+              .catch(error => {
+                console.error('Error loading transactions:', error);
+                showErrorState();
+                isLoading = false;
+              });
+          }, 300); // 300ms debounce for search input
+        }
+        
+        function attachRowEventListeners() {
+          document.querySelectorAll('.order-row').forEach(function(row) {
+            row.addEventListener('click', function() {
+              // Set transaction ID and current status in modal
+              document.getElementById('modalTransactionId').value = row.getAttribute('data-transaction-id');
+              
+              // Reset to default status type (Order Status)
+              setStatusType('status');
+              document.getElementById('modalStatus').value = row.getAttribute('data-status');
+              
+              // Show modal
+              var modal = new bootstrap.Modal(document.getElementById('statusModal'));
+              modal.show();
+            });
           });
+        }
+        
+        // Add event listeners for filters with different debounce times
+        document.getElementById('searchInput').addEventListener('input', loadTransactions); // Debounced
+        document.getElementById('timePeriodFilter').addEventListener('change', () => {
+          showLoadingState();
+          setTimeout(loadTransactions, 50); // Immediate for dropdowns
         });
+        document.getElementById('orderStatusFilter').addEventListener('change', () => {
+          showLoadingState();
+          setTimeout(loadTransactions, 50);
+        });
+        document.getElementById('claimStatusFilter').addEventListener('change', () => {
+          showLoadingState();
+          setTimeout(loadTransactions, 50);
+        });
+        document.getElementById('paymentStatusFilter').addEventListener('change', () => {
+          showLoadingState();
+          setTimeout(loadTransactions, 50);
+        });
+        
+        // Initial load with default filters already applied by PHP
+        attachRowEventListeners();
       });
     </script>
 

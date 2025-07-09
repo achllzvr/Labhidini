@@ -698,5 +698,102 @@ class database{
     }
 
     // *------------------------------------------ END OF ADMIN FUNCTIONS ----------------------------------------------------*
-    
+
+    // Function to get filtered transactions based on criteria (Performance optimized)
+    function getFilteredTransactions($timePeriod = 'day', $orderStatus = '', $claimStatus = '', $paymentStatus = '', $searchTerm = ''){
+
+        try {
+            // Open connection with database
+            $con = $this->opencon();
+
+            // Base query
+            $query = "SELECT 
+                        t.TransactionID,
+                        CONCAT(c.CustomerFN, ' ', c.CustomerLN) AS CustomerName,
+                        DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
+                        GROUP_CONCAT(DISTINCT ls.LaundryService_Name SEPARATOR ', ') AS Services,
+                        s.StatusName AS Status,
+                        t.StatusID AS StatusID,
+                        t.ClaimStatus AS ClaimStatus,
+                        t.PaymentStatus AS PaymentStatus,
+                        t.TransacTotalAmount
+                    FROM transaction t
+                    JOIN transactiondetails td ON t.TransactionID = td.TransactionID
+                    JOIN customer c ON t.CustomerID = c.CustomerID
+                    JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
+                    JOIN status s ON t.StatusID = s.StatusID
+                    WHERE 1=1";
+
+            $params = [];
+
+            // Time period filter
+            switch($timePeriod) {
+                case 'day':
+                    $query .= " AND DATE(t.TransactionTimestamp) = CURDATE()";
+                    break;
+                case 'week':
+                    $query .= " AND t.TransactionTimestamp >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                    break;
+                case 'month':
+                    $query .= " AND MONTH(t.TransactionTimestamp) = MONTH(CURDATE()) AND YEAR(t.TransactionTimestamp) = YEAR(CURDATE())";
+                    break;
+                case 'year':
+                    $query .= " AND YEAR(t.TransactionTimestamp) = YEAR(CURDATE())";
+                    break;
+                case 'all':
+                default:
+                    // No additional time filter
+                    break;
+            }
+
+            // Order status filter
+            if (!empty($orderStatus)) {
+                $query .= " AND t.StatusID = ?";
+                $params[] = $orderStatus;
+            }
+
+            // Claim status filter
+            if (!empty($claimStatus)) {
+                $query .= " AND t.ClaimStatus = ?";
+                $params[] = $claimStatus;
+            }
+
+            // Payment status filter
+            if (!empty($paymentStatus)) {
+                $query .= " AND t.PaymentStatus = ?";
+                $params[] = $paymentStatus;
+            }
+
+            // Search term filter (Customer name or Transaction ID)
+            if (!empty($searchTerm)) {
+                $query .= " AND (CONCAT(c.CustomerFN, ' ', c.CustomerLN) LIKE ? OR t.TransactionID LIKE ?)";
+                $searchParam = '%' . $searchTerm . '%';
+                $params[] = $searchParam;
+                $params[] = $searchParam;
+            }
+
+            $query .= " GROUP BY t.TransactionID ORDER BY t.TransactionTimestamp DESC LIMIT 1000";
+
+            // Prepare and execute the statement
+            $stmt = $con->prepare($query);
+            if (!$stmt) {
+                throw new Exception("Failed to prepare statement");
+            }
+            
+            $success = $stmt->execute($params);
+            if (!$success) {
+                throw new Exception("Failed to execute statement");
+            }
+
+            // Fetch the transaction data as an associative array
+            $transaction_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Return the transaction data
+            return $transaction_data;
+        } catch (Exception $e) {
+            error_log("Error in getFilteredTransactions: " . $e->getMessage());
+            return [];
+        }
+    }
+
 }
