@@ -12,11 +12,11 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
 
   // If not logged in, redirect to login page
   if (!isset($_SESSION['adminID'])) {
-    header("Location: /washette/loginAdmin.php");
+    header("Location: loginAdmin.php");
     exit();
   } else {
     // If a customer is logged in, redirect to user home page
-    header("Location: /washette/userFolder/userHome.php");
+    header("Location: error404.php");
     exit();
   }
 
@@ -59,7 +59,7 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
             text: 'Your ID is: $adminID',
             confirmButtonText: 'OK'
           }).then(() => {
-            window.location.href = '/washette/adminFolder/adminHome.php';
+            window.location.href = 'adminFolder/adminHome.php';
           });
           </script>
           ";
@@ -85,7 +85,7 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Register Admin - Washette Laundromat</title>
+    <title>Register Admin - Labhidini Laundromat</title>
     <link rel="icon" type="image/png" href="img/icon.png" />
 
     <!-- Bootstrap CSS -->
@@ -175,9 +175,9 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
           </select>
         </div>
         <!-- Submit button -->
-        <button name="register" type="submit" class="btn btn-washette mt-1" disabled>Register</button>
+        <button name="register" type="submit" class="btn btn-labhidini mt-1" disabled>Register</button>
         <!-- Back button -->
-        <button name="back" class="btn btn-washette mt-1" onClick="window.history.back();">Back</button>
+        <button name="back" class="btn btn-labhidini mt-1" onClick="window.history.back();">Back</button>
       <!-- End of Form -->
       </form>
     </div>

@@ -10,7 +10,7 @@ session_unset();
 session_destroy();
 
 // Redirect to the login page
-header("Location: login.php");
+header("Location: loginAdmin.php");
 
 exit();
 

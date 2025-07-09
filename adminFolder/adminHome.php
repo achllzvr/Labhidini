@@ -12,11 +12,11 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
 
   // If not logged in, redirect to login page
   if (!isset($_SESSION['adminID'])) {
-    header("Location: /washette/loginAdmin.php");
+    header("Location: ../loginAdmin.php");
     exit();
   } else {
     // If a customer is logged in, redirect to user home page
-    header("Location: /washette/userFolder/userHome.php");
+    header("Location: ../error404.php");
     exit();
   }
 
@@ -40,7 +40,7 @@ $sweetAlertConfig = "";
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Home - Washette Laundromat</title>
+  <title>Admin Home - Labhidini Laundromat</title>
   <link rel="icon" type="image/png" href="../img/icon.png" />
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -56,7 +56,7 @@ $sweetAlertConfig = "";
     href="https://fonts.googleapis.com/css2?family=Arimo:ital,wght@0,400..700;1,400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
     rel="stylesheet" />
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="/washette/adminFolder/admin.css" />
+  <link rel="stylesheet" href="admin.css" />
 </head>
 
 <body>
@@ -74,7 +74,7 @@ $sweetAlertConfig = "";
     <div class="header d-flex align-items-center justify-content-between rounded-4 px-4 py-3 mb-4"
       style="background: #bde7e3">
       <div class="d-flex align-items-center" style="gap: 18px; margin-left: 12px">
-        <img src="../img/icon.png" alt="Washette Logo" style="
+        <img src="../img/icon.png" alt="Labhidini Logo" style="
               width: 56px;
               height: 56px;
               border-radius: 50%;
@@ -306,76 +306,9 @@ $sweetAlertConfig = "";
         </div>
       </div>
     </div>
-    <div class="row g-3 mt-2">
-      <div class="col-3">
-        <div class="card about-card p-3 h-100 position-relative" id="aboutUsCard" style="cursor: pointer">
-          <div class="card-body d-flex align-items-center">
-            <span class="card-icon me-3">
-              <i class="fas fa-info-circle"></i>
-            </span>
-            <div class="card-content flex-grow-1">
-              <h5 class="card-title mb-1">About Us</h5>
-              <p class="card-text mb-0">See our services</p>
-            </div>
-            <span class="card-arrow">
-              <i class="fas fa-chevron-right"></i>
-            </span>
-          </div>
-        </div>
-      </div>
-      <!-- Location Card -->
-      <div class="col-3">
-        <div class="card about-card p-3 h-100 position-relative" id="locationCard" style="cursor: pointer">
-          <div class="card-body d-flex align-items-center">
-            <span class="card-icon me-3">
-              <i class="fas fa-map-marker-alt"></i>
-            </span>
-            <div class="card-content flex-grow-1">
-              <h5 class="card-title mb-1">Location</h5>
-              <p class="card-text mb-0">See our location</p>
-            </div>
-            <span class="card-arrow">
-              <i class="fas fa-chevron-right"></i>
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="col-3">
-        <div class="card about-card p-3 h-100 position-relative" id="termsCard" style="cursor: pointer">
-          <div class="card-body d-flex align-items-center">
-            <span class="card-icon me-3">
-              <i class="fas fa-file-contract"></i>
-            </span>
-            <div class="card-content flex-grow-1">
-              <h5 class="card-title mb-1">Terms & Agreements</h5>
-              <p class="card-text mb-0">View our terms and policies</p>
-            </div>
-            <span class="card-arrow">
-              <i class="fas fa-chevron-right"></i>
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="col-3">
-        <div class="card about-card p-3 h-100 position-relative" id="contactUsCard" style="cursor: pointer">
-          <div class="card-body d-flex align-items-center">
-            <span class="card-icon me-3">
-              <i class="fas fa-envelope"></i>
-            </span>
-            <div class="card-content flex-grow-1">
-              <h5 class="card-title mb-1">Contact Us</h5>
-              <p class="card-text mb-0">See our contact information</p>
-            </div>
-            <span class="card-arrow">
-              <i class="fas fa-chevron-right"></i>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
-  <div class="footer-washette" style="flex-shrink: 0">
-    &copy; 2025 Washette Laundromat
+  <div class="footer-labhidini" style="flex-shrink: 0">
+    &copy; 2025 Labhidini Laundromat
   </div>
   <div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -416,216 +349,7 @@ $sweetAlertConfig = "";
       </div>
     </div>
   </div>
-  <div class="modal fade" id="contactUsModal" tabindex="-1" aria-labelledby="contactUsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="contactUsModalLabel">Contact Us</h5>
-        </div>
-        <div class="modal-body">
-          <div style="
-                color: #395c58;
-                font-size: 1.05rem;
-                font-weight: 400;
-                line-height: 1.7;
-                padding: 18px 24px;
-                margin-bottom: -2em;
-              ">
-            <div class="mb-3" style="display: flex; align-items: center; gap: 10px">
-              <i class="fas fa-phone fa-lg" style="color: #395c58; min-width: 24px; text-align: center"></i>
-              <span style="font-family: inherit">+63 927 701 0505</span>
-            </div>
 
-            <div class="mb-3" style="display: flex; align-items: center; gap: 10px">
-              <i class="fab fa-facebook fa-lg" style="color: #395c58; min-width: 24px; text-align: center"></i>
-              <a href="https://www.facebook.com/washettelaundromat" target="_blank" rel="noopener noreferrer" style="
-                    font-family: inherit;
-                    color: #395c58;
-                    text-decoration: none;
-                    font-weight: 500;
-                    cursor: pointer;
-                  " onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-                Washette Laundromat
-              </a>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn filter-btn" style="
-                border-radius: 18px;
-                font-weight: 500;
-                font-size: 1rem;
-                padding: 0.6rem 2.2rem;
-                background: #466c69;
-                color: #fff;
-                border: none;
-                box-shadow: 0 2px 8px rgba(57, 92, 88, 0.07);
-              " data-bs-dismiss="modal">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- Location Modal -->
-  <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="locationModalLabel">Our Location</h5>
-        </div>
-        <div class="modal-body">
-          <div style="
-                color: #395c58;
-                font-size: 1.05rem;
-                font-weight: 400;
-                line-height: 1.7;
-                padding: 18px 24px;
-                margin-bottom: 0;
-              ">
-            <div style="display: flex; align-items: flex-start; gap: 10px">
-              <i class="fas fa-map-marker-alt fa-lg" style="
-                    color: #395c58;
-                    min-width: 24px;
-                    text-align: center;
-                    margin-top: 12px;
-                  "></i>
-              <span style="font-family: inherit">
-                Unit 8 Blk4 Lot15 Dona Aurora St.<br />
-                City Park Subdivision Brgy Sabang<br />
-                Lipa City Batangas
-              </span>
-            </div>
-            <div style="
-                  margin-top: 18px;
-                  margin-bottom: -1.5em;
-                  text-align: center;
-                ">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d484.0120904635915!2d121.16690879877665!3d13.952846149109217!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33bd6dd158c3d7c1%3A0x351b75b1d8884624!2sWashette%20Laundry%20Services!5e0!3m2!1sen!2sph!4v1749284420290!5m2!1sen!2sph"
-                width="700" height="300" style="border: 0; border-radius: 10px" allowfullscreen="" loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"></iframe>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn filter-btn" style="
-                border-radius: 18px;
-                font-weight: 500;
-                font-size: 1rem;
-                padding: 0.6rem 2.2rem;
-                background: #395c58;
-                color: #fff;
-                border: none;
-                box-shadow: 0 2px 8px rgba(57, 92, 88, 0.07);
-              " data-bs-dismiss="modal">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="aboutUsModal" tabindex="-1" aria-labelledby="aboutUsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="aboutUsModalLabel">About Us</h5>
-        </div>
-        <div class="modal-body">
-          <p style="
-                color: #395c58;
-                font-size: 0.98rem;
-                font-weight: 400;
-                line-height: 1.7;
-                padding: 18px 24px;
-                margin-bottom: 0;
-              ">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            Pellentesque euismod, nisi eu consectetur cursus, enim erat dictum
-            urna, nec dictum sapien enim nec urna. Proin facilisis, velit ac
-            sollicitudin cursus, enim erat dictum urna, nec dictum sapien enim
-            nec urna.
-            <br /><br />
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-            accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
-            quae ab illo inventore veritatis et quasi architecto beatae vitae
-            dicta sunt explicabo.
-            <br /><br />
-            Our mission is to deliver exceptional laundry services with
-            professionalism, reliability, and care for every customer.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn filter-btn" style="
-                border-radius: 18px;
-                font-weight: 500;
-                font-size: 1rem;
-                padding: 0.6rem 2.2rem;
-                background: #466c69;
-                color: #fff;
-                border: none;
-                box-shadow: 0 2px 8px rgba(57, 92, 88, 0.07);
-              " data-bs-dismiss="modal">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="termsModalLabel">Terms & Agreement</h5>
-        </div>
-        <div class="modal-body" style="color: #395c58; font-size: 1.05rem; line-height: 1.7">
-          <ol style="padding-left: 1.3em; margin-bottom: 0">
-            <li style="margin-bottom: 1em">
-              Washette Laundromat is not liable for any missing socks,
-              undergarments, or small items unless you provide a list of your
-              laundry before washing.
-            </li>
-            <li style="margin-bottom: 1em">
-              Washette Laundromat is not responsible for changes resulting
-              from the normal washing process, such as loss of buttons, items
-              left in pockets, shrinkage, discoloration, burns, or rips.
-              Please do not include delicate or pre-damaged clothes.
-            </li>
-            <li style="margin-bottom: 1em">
-              Any discrepancies must be reported within 24 hours from pick-up
-              time. Complaints after 24 hours will not be entertained.
-            </li>
-            <li style="margin-bottom: 1em">
-              Liability for loss is limited to an amount not exceeding three
-              (3) times the laundry package cost.
-            </li>
-            <li style="margin-bottom: 1em">
-              Items not claimed or collected within 30 days will be disposed
-              of without prior notice.
-            </li>
-            <li>
-              By using our services, you agree to these laundry rules and
-              terms.
-            </li>
-          </ol>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn filter-btn" style="
-                border-radius: 18px;
-                font-weight: 500;
-                font-size: 1rem;
-                padding: 0.6rem 2.2rem;
-                background: #395c58;
-                color: #fff;
-                border: none;
-                box-shadow: 0 2px 8px rgba(57, 92, 88, 0.07);
-              " data-bs-dismiss="modal">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
   <!-- Services Modal -->
   <div class="modal fade" id="servicesModal" tabindex="-1" aria-labelledby="servicesModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -754,6 +478,7 @@ $sweetAlertConfig = "";
       </div>
     </div>
   </div>
+
   <!-- Profile Modal -->
   <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -826,6 +551,7 @@ $sweetAlertConfig = "";
       </div>
     </div>
   </div>
+
   <!-- scripts for frontend functionality -->
   <script src="adminscript.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"

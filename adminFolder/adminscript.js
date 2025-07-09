@@ -194,7 +194,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var newOrderCard = document.getElementById("newOrderCard");
   if (newOrderCard) {
     newOrderCard.addEventListener("click", function () {
-      window.location.href = "../adminFolder/newOrder.php";
+      window.location.href = "newOrder.php";
     });
   }
 });
@@ -204,7 +204,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var orderListCard = document.getElementById("orderListCard");
   if (orderListCard) {
     orderListCard.addEventListener("click", function () {
-      window.location.href = "../adminFolder/orderList.php";
+      window.location.href = "orderList.php";
     });
   }
 });
@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var editServicesBtn = document.getElementById("editServicesBtn");
   if (editServicesBtn) {
     editServicesBtn.addEventListener("click", function () {
-      window.location.href = "../adminFolder/services.php";
+      window.location.href = "services.php";
     });
   }
 });
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var customerListCard = document.getElementById("customerListCard");
   if (customerListCard) {
     customerListCard.addEventListener("click", function () {
-      window.location.href = "../adminFolder/customerList.php";
+      window.location.href = "customerList.php";
     });
   }
 });
@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var salesCard = document.getElementById("salesCard");
   if (salesCard) {
     salesCard.addEventListener("click", function () {
-      window.location.href = "../adminFolder/sales.php";
+      window.location.href = "sales.php";
     });
   }
 });

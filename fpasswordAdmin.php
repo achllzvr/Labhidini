@@ -13,7 +13,7 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
   // If Customer logged in, redirect to the appropriate home page
   if (isset($_SESSION['CustomerID'])) {
 
-    header("Location: /washette/userFolder/userHome.php");
+    header("Location: error404.php");
     exit();
 
   }
@@ -82,7 +82,7 @@ if (isset($_POST['resetPassword'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reset Password - Washette Laundromat</title>
+    <title>Reset Password - Labhidini Laundromat</title>
     <link rel="icon" type="image/png" href="img/icon.png" />
 
     <!-- Bootstrap CSS -->
@@ -183,7 +183,7 @@ if (isset($_POST['resetPassword'])) {
           type="submit"
           name="resetPassword"
           id="resetPasswordBtn"
-          class="btn btn-washette mt-1"
+          class="btn btn-labhidini mt-1"
         >
           Set New Password
         </button>
@@ -194,7 +194,7 @@ if (isset($_POST['resetPassword'])) {
     </div>
 
      <!-- scripts for frontend functionality -->
-    <script src="userFolder/userscript.js"></script>
+    <script src="adminFolder/userscript.js"></script>
     <script>
       // Toggle password visibility for new password
       const newPasswordInput = document.getElementById('newPassword');

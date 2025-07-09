@@ -6,7 +6,7 @@ class database{
     function opencon(){
         return new PDO( 
         'mysql:host=127.0.0.1; 
-        dbname=washettedb',   
+        dbname=labhidini',   
         username: 'root', 
         password: '');
     }
@@ -646,164 +646,7 @@ class database{
             return $lastAdminID;
         }
 
-    // *------------------------------------------ END OF ADMIN FUNCTIONS ----------------------------------------------------*
-
-    // *------------------------------------------ START OF CUSTOMER FUNCTIONS ----------------------------------------------------*
-
-    // Function to signup user
-    function signupCustomer($password, $firstname, $lastname){
-        $con = $this->opencon();
-
-        try{
-            $con->beginTransaction();
-
-            $stmt = $con->prepare("INSERT INTO customer (CustomerFN, CustomerLN, CustomerPassword) VALUES (?,?,?)");
-            $stmt->execute([$firstname, $lastname, $password]);
-
-            $userID = $con->lastInsertId();
-            $con->commit();
-
-            return $userID;   
-        }catch (PDOException $e){
-            $con->rollBack();
-            return false;
-        }
-
-    }
-
-        // Function to get last customer ID
-        function getLastCustomerID(){
-            // Open connection with database
-            $con = $this->opencon();
-
-            // Prepare SQL statement to get the last Customer ID
-            $stmt = $con->prepare("SELECT CustomerID FROM customer ORDER BY CustomerID DESC LIMIT 1");
-            
-            // Execute the statement
-            $stmt->execute();
-
-            // Fetch the last Customer ID
-            $lastCustomerID = $stmt->fetchColumn();
-
-            // Return the last Customer ID
-            return $lastCustomerID;
-        }
-
-    // Function to login customer
-    function loginCustomer($id, $password){
-
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to check if username exists
-        $stmt = $con->prepare("SELECT * FROM customer WHERE CustomerID = ?");
-        // Executes the statement
-        $stmt->execute([$id]);
-
-        // Fetch the user data
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // Verify password if user exists
-        // If user exists and password matches, return user data
-        if($user && password_verify($password, $user['CustomerPassword'])) {
-            // If password matches, return user data
-            return $user;
-        } else {
-            // If user does not exist or password does not match, return false
-            return false;
-        }
-
-    }
-
-    // Function to get Customer data by ID
-    function changeCustomerPass($id, $newPassword){
-
-        // Open connection with database
-        $con = $this->opencon();
-
-        try{
-            $con->beginTransaction();
-
-            $stmt = $con->prepare("UPDATE customer SET CustomerPassword = ? WHERE CustomerID = ?");
-            $stmt->execute([$newPassword, $id]);
-
-            $con->commit();
-
-            return true;   
-        }catch (PDOException $e){
-            $con->rollBack();
-            return false;
-        }
-
-    }
-  
-    // Function to get Transaction data (not Transaction Details) by ID
-    function getTransactions($CustomerID){
-
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get Transaction data by ID
-        $stmt = $con->prepare("SELECT 
-                                t.TransactionID,
-                                DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                                GROUP_CONCAT(ls.LaundryService_Name SEPARATOR ', ') AS Services,
-                                s.StatusName AS Status,
-                                t.TransacTotalAmount
-                            FROM transaction t
-                            JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                            JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
-                            JOIN status s ON t.StatusID = s.StatusID
-                            WHERE t.CustomerID = ?
-                            GROUP BY t.TransactionID
-                            ORDER BY t.TransactionID DESC;
-                            ");                 
-        // Execute the statement with the student ID
-        $stmt->execute([$CustomerID]);
-
-        // Fetch the student data as an associative array
-        $transaction_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the student data
-        return $transaction_data;
-    }
-
-    // Function to get latest Transaction data (not Transaction Details) by ID
-    function getLatestTransaction($CustomerID){
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get latest Transaction data by ID
-        $stmt = $con->prepare("SELECT 
-                                t.TransactionID,
-                                t.CustomerID,
-                                GROUP_CONCAT(CONCAT(ls.LaundryService_Name, ' ×', td.TDQuantity) SEPARATOR ', ') AS Services,
-                                s.StatusName,
-                                pm.PMethodName,
-                                t.TransacTotalAmount,
-                                DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate
-                            FROM transaction t
-                            JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                            JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
-                            JOIN status s ON t.StatusID = s.StatusID
-                            JOIN paymentmethod pm ON t.PaymentMethodID = pm.PaymentMethodID
-                            WHERE t.CustomerID = ?
-                            GROUP BY t.TransactionID
-                            ORDER BY t.TransactionTimestamp DESC
-                            LIMIT 1;
-                            ");
-
-        // Execute the statement with the student ID
-        $stmt->execute([$CustomerID]);
-
-        // Fetch the student data as an associative array
-        $transaction_data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // Return the student data
-        return $transaction_data;
-    }
-
-    // Function to get Services list
+    // Function to get Services list (used by admin for display purposes)
     function getPremiumServicesList(){
         // Open connection with database
         $con = $this->opencon();
@@ -821,7 +664,7 @@ class database{
         return $services;
     }
 
-    // Function to get Services list
+    // Function to get Services list (used by admin for display purposes)
     function getRegularServicesList(){
         // Open connection with database
         $con = $this->opencon();
@@ -838,5 +681,7 @@ class database{
         // Return the services data
         return $services;
     }
+
+    // *------------------------------------------ END OF ADMIN FUNCTIONS ----------------------------------------------------*
     
 }

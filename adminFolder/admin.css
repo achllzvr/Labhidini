@@ -201,7 +201,7 @@ body {
   margin-bottom: 2.5rem;
 }
 
-.footer-washette {
+.footer-labhidini {
   color: rgba(40, 60, 60, 1) !important;
   width: 100%;
   text-align: center;
@@ -747,7 +747,7 @@ body.modal-blur-fadeout .modal.show {
 #addServiceModal .form-control:focus::placeholder {
   color: #708b89 !important;
 }
-#addServiceModal .btn-washette {
+#addServiceModal .btn-labhidini {
   background: #395c58 !important;
   color: #fff !important;
   border-radius: 12px;
@@ -760,13 +760,13 @@ body.modal-blur-fadeout .modal.show {
   transition: transform 0.3s ease, background 0.15s;
   transform: scale(1);
 }
-#addServiceModal .btn-washette:hover,
-#addServiceModal .btn-washette:focus {
+#addServiceModal .btn-labhidini:hover,
+#addServiceModal .btn-labhidini:focus {
   transform: scale(1.02);
   color: #fff !important;
   background: #2C4744 !important;
 }
-#addServiceModal .btn-washette:active {
+#addServiceModal .btn-labhidini:active {
   opacity: 0;
   transform: scale(0.9);
 }

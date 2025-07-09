@@ -12,11 +12,11 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
   
   // If not logged in, redirect to login page
   if (!isset($_SESSION['adminID'])) {
-    header("Location: /washette/loginAdmin.php");
+    header("Location: ../loginAdmin.php");
     exit();
   } else {
     // If a customer is logged in, redirect to user home page
-    header("Location: /washette/userFolder/userHome.php");
+    header("Location: ../error404.php");
     exit();
   }
 
@@ -95,7 +95,7 @@ if (isset($_POST['placeOrderBtn'])) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>New Order - Washette Laundromat</title>
+    <title>New Order - Labhidini Laundromat</title>
     <link rel="icon" type="image/png" href="../img/icon.png" />
     <!-- Bootstrap CSS -->
     <link

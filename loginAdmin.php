@@ -14,13 +14,13 @@ if (isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
   if (isset($_SESSION['adminID'])) {
 
     // If an admin is logged in, redirect to admin home page
-    header("Location: /washette/adminFolder/adminHome.php");
+    header("Location: adminFolder/adminHome.php");
     exit();
 
   } else {
 
     // If a customer is logged in, redirect to user home page
-    header("Location: /washette/userFolder/userHome.php");
+    header("Location: error404.php");
     exit();
     
   }
@@ -61,9 +61,8 @@ $sweetAlertConfig = "";
         icon: 'success',
         title: 'Login Successful',
         text: 'Welcome, " . addslashes(htmlspecialchars($_SESSION['adminFN']) . ' ' . ($_SESSION['adminLN'])) . "!',
-        confirmButtonText: 'Continue'
-      }).then(() => {
-        window.location.href = '../washette/adminFolder/adminHome.php';
+        confirmButtonText: 'Continue'        }).then(() => {
+        window.location.href = 'adminFolder/adminHome.php';
       });
 
       </script>";
@@ -89,7 +88,7 @@ $sweetAlertConfig = "";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Login - Washette Laundromat</title>
+    <title>Admin Login - Labhidini Laundromat</title>
     <link rel="icon" type="image/png" href="img/icon.png" />
 
     <!-- Bootstrap CSS -->
@@ -151,18 +150,14 @@ $sweetAlertConfig = "";
         </div>
 
         <!-- Login button -->
-        <button name="login" type="submit" class="btn btn-washette mt-1"> Login </button>
-
-        <div class="mt-3">
-          <p>Are you a customer? <a href="login.php" class="link-btn" style="text-decoration: underline; font-weight: bold;" >Login as Customer</a></p>
-        </div>
-
+        <button name="login" type="submit" class="btn btn-labhidini mt-1"> Login </button>
+        
       <!-- End of Form -->
       </form>
     </div>
 
     <!-- scripts for frontend functionality -->
-    <script src="userFolder/userscript.js"></script>
+    <script src="adminFolder/userscript.js"></script>
     
     <script>
       // Toggle password visibility

@@ -12,11 +12,11 @@ if (!isset($_SESSION['adminID']) || isset($_SESSION['CustomerID'])) {
   
   // If not logged in, redirect to login page
   if (!isset($_SESSION['adminID'])) {
-    header("Location: /washette/loginAdmin.php");
+    header("Location: ../loginAdmin.php");
     exit();
   } else {
     // If a customer is logged in, redirect to user home page
-    header("Location: /washette/userFolder/userHome.php");
+    header("Location: ../error404.php");
     exit();
   }
 }
