@@ -33,6 +33,94 @@ $_SESSION['adminName'] = $_SESSION['adminFN'] . " " . $_SESSION['adminLN'];
 $sweetAlertConfig = "";
 
 
+// Check if this is an export request
+if(isset($_GET['export']) && $_GET['export'] == 'excel') {
+  try {
+    $timePeriod = $_GET['timePeriod'] ?? 'day';
+    $orderStatus = $_GET['orderStatus'] ?? '';
+    $claimStatus = $_GET['claimStatus'] ?? '';
+    $paymentStatus = $_GET['paymentStatus'] ?? '';
+    $searchTerm = $_GET['searchTerm'] ?? '';
+    
+    $transactions = $con->getFilteredTransactions($timePeriod, $orderStatus, $claimStatus, $paymentStatus, $searchTerm, true);
+    
+    // Generate filename with timestamp and filters
+    $filterDesc = [];
+    if ($timePeriod !== 'all') $filterDesc[] = ucfirst($timePeriod);
+    if (!empty($searchTerm)) $filterDesc[] = "Search-" . preg_replace('/[^a-zA-Z0-9]/', '', $searchTerm);
+    if (!empty($orderStatus)) $filterDesc[] = "Order-" . $orderStatus;
+    if (!empty($claimStatus)) $filterDesc[] = "Claim-" . $claimStatus;
+    if (!empty($paymentStatus)) $filterDesc[] = "Payment-" . $paymentStatus;
+    
+    $filterString = empty($filterDesc) ? 'All' : implode('-', $filterDesc);
+    $filename = 'Labhidini_Orders_' . $filterString . '_' . date('Y-m-d_H-i-s') . '.csv';
+    
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    header('Pragma: public');
+    
+    // Create output stream
+    $output = fopen('php://output', 'w');
+    
+    // Add BOM for proper UTF-8 encoding in Excel
+    fwrite($output, "\xEF\xBB\xBF");
+    
+    // Write CSV header
+    fputcsv($output, [
+      'Transaction ID',
+      'Customer Name', 
+      'Date',
+      'Services',
+      'Order Status',
+      'Claim Status',
+      'Payment Status',
+      'Total Amount (PHP)',
+      'Exported On'
+    ]);
+    
+    // Write data rows
+    foreach ($transactions as $transaction) {
+      // Format claim and payment status
+      $claimStatusText = ($transaction['ClaimStatus'] == '2') ? 'Claimed' : 'Unclaimed';
+      $paymentStatusText = ($transaction['PaymentStatus'] == '2') ? 'Paid' : 'Unpaid';
+      
+      fputcsv($output, [
+        $transaction['TransactionID'],
+        $transaction['CustomerName'],
+        $transaction['FormattedDate'],
+        $transaction['Services'],
+        $transaction['Status'],
+        $claimStatusText,
+        $paymentStatusText,
+        number_format($transaction['TransacTotalAmount'], 2),
+        date('Y-m-d H:i:s')
+      ]);
+    }
+    
+    // Add summary row
+    $totalAmount = array_sum(array_column($transactions, 'TransacTotalAmount'));
+    $totalCount = count($transactions);
+    
+    fputcsv($output, []); // Empty row
+    fputcsv($output, ['SUMMARY', '', '', '', '', '', '', '', '']);
+    fputcsv($output, ['Total Transactions', $totalCount, '', '', '', '', '', '', '']);
+    fputcsv($output, ['Total Amount', '', '', '', '', '', '', number_format($totalAmount, 2), '']);
+    fputcsv($output, ['Export Date', date('Y-m-d H:i:s'), '', '', '', '', '', '', '']);
+    fputcsv($output, ['Exported By', $_SESSION['adminName'], '', '', '', '', '', '', '']);
+    
+    fclose($output);
+    exit();
+    
+  } catch (Exception $e) {
+    error_log("Error in orderList.php export endpoint: " . $e->getMessage());
+    header('HTTP/1.1 500 Internal Server Error');
+    echo "Export failed. Please try again.";
+    exit();
+  }
+}
+
 // Check if this is an AJAX request for filtered data
 if(isset($_GET['ajax']) && $_GET['ajax'] == 'filter') {
   header('Content-Type: application/json');
@@ -373,6 +461,22 @@ if(isset($_POST['updateStatusButton'])) {
       #transactionTableBody.loading {
         opacity: 0.7;
       }
+      
+      /* Export button styling */
+      #exportBtn {
+        transition: all 0.3s ease;
+      }
+      
+      #exportBtn:hover:not(:disabled) {
+        background: #146c43 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
+      }
+      
+      #exportBtn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -400,14 +504,25 @@ if(isset($_POST['updateStatusButton'])) {
           <div class="card-title mb-0">
             <i class="fas fa-box me-2"></i>Order List
           </div>
-          <button
-            type="button"
-            class="btn btn-sm filter-btn"
-            style="background: #222; color: #baebe6"
-            onclick="window.location.href='adminHome.php';"
-          >
-            <i class="fas fa-arrow-left me-1"></i>Back
-          </button>
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-sm"
+              id="exportBtn"
+              style="background: #198754; color: white; border: none;"
+              title="Export filtered data to Excel"
+            >
+              <i class="fas fa-download me-1"></i>Export Excel
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm filter-btn"
+              style="background: #222; color: #baebe6"
+              onclick="window.location.href='adminHome.php';"
+            >
+              <i class="fas fa-arrow-left me-1"></i>Back
+            </button>
+          </div>
         </div>
         
         <!-- Search and Filter Controls -->
@@ -870,6 +985,54 @@ if(isset($_POST['updateStatusButton'])) {
         
         // Initial load with default filters already applied by PHP
         attachRowEventListeners();
+        
+        // Export functionality
+        document.getElementById('exportBtn').addEventListener('click', function() {
+          const searchInput = document.getElementById('searchInput').value;
+          const timePeriodFilter = document.getElementById('timePeriodFilter').value;
+          const orderStatusFilter = document.getElementById('orderStatusFilter').value;
+          const claimStatusFilter = document.getElementById('claimStatusFilter').value;
+          const paymentStatusFilter = document.getElementById('paymentStatusFilter').value;
+          
+          // Build export URL with current filters
+          const params = new URLSearchParams({
+            export: 'excel',
+            timePeriod: timePeriodFilter,
+            orderStatus: orderStatusFilter,
+            claimStatus: claimStatusFilter,
+            paymentStatus: paymentStatusFilter,
+            searchTerm: searchInput
+          });
+          
+          // Show loading state on button
+          const exportBtn = document.getElementById('exportBtn');
+          const originalContent = exportBtn.innerHTML;
+          exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Exporting...';
+          exportBtn.disabled = true;
+          
+          // Create hidden link and trigger download
+          const link = document.createElement('a');
+          link.href = `orderList.php?${params.toString()}`;
+          link.download = ''; // Let the server determine filename
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Reset button after a short delay
+          setTimeout(() => {
+            exportBtn.innerHTML = originalContent;
+            exportBtn.disabled = false;
+            
+            // Show success message
+            Swal.fire({
+              icon: 'success',
+              title: 'Export Complete',
+              text: 'Your Excel file has been downloaded successfully!',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }, 1500);
+        });
       });
     </script>
 

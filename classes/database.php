@@ -700,7 +700,7 @@ class database{
     // *------------------------------------------ END OF ADMIN FUNCTIONS ----------------------------------------------------*
 
     // Function to get filtered transactions based on criteria (Performance optimized)
-    function getFilteredTransactions($timePeriod = 'day', $orderStatus = '', $claimStatus = '', $paymentStatus = '', $searchTerm = ''){
+    function getFilteredTransactions($timePeriod = 'day', $orderStatus = '', $claimStatus = '', $paymentStatus = '', $searchTerm = '', $forExport = false){
 
         try {
             // Open connection with database
@@ -772,7 +772,12 @@ class database{
                 $params[] = $searchParam;
             }
 
-            $query .= " GROUP BY t.TransactionID ORDER BY t.TransactionTimestamp DESC LIMIT 1000";
+            $query .= " GROUP BY t.TransactionID ORDER BY t.TransactionTimestamp DESC";
+            
+            // Add limit only for web display, not for exports
+            if (!$forExport) {
+                $query .= " LIMIT 1000";
+            }
 
             // Prepare and execute the statement
             $stmt = $con->prepare($query);
