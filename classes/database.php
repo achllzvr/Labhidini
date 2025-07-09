@@ -191,8 +191,8 @@ class database{
         return $transaction_details;
     }
 
-    // Function to update Transaction Status data
-    function updateTransactionStatus($status, $admin_id, $transactionID){
+    // Function to update Transaction Status data (supports multiple status types)
+    function updateTransactionStatus($statusValue, $admin_id, $transactionID, $statusType = 'status'){
 
         // Establish Connection with Database
         $con = $this->opencon();
@@ -200,8 +200,21 @@ class database{
         try{
             $con->beginTransaction();
 
-            $query = $con->prepare("UPDATE transaction SET StatusID = ?, UA_ID = ? WHERE TransactionID = ?");
-            $query->execute([$status, $admin_id, $transactionID]);
+            // Determine which column to update based on status type
+            switch($statusType) {
+                case 'claim':
+                    $query = $con->prepare("UPDATE transaction SET ClaimStatus = ?, UA_ID = ? WHERE TransactionID = ?");
+                    break;
+                case 'payment':
+                    $query = $con->prepare("UPDATE transaction SET PaymentStatus = ?, UA_ID = ? WHERE TransactionID = ?");
+                    break;
+                case 'status':
+                default:
+                    $query = $con->prepare("UPDATE transaction SET StatusID = ?, UA_ID = ? WHERE TransactionID = ?");
+                    break;
+            }
+            
+            $query->execute([$statusValue, $admin_id, $transactionID]);
 
             $con->commit();
 
@@ -227,6 +240,8 @@ class database{
                                 GROUP_CONCAT(ls.LaundryService_Name SEPARATOR ', ') AS Services,
                                 s.StatusName AS Status,
                                 t.StatusID AS StatusID,
+                                t.ClaimStatus AS ClaimStatus,
+                                t.PaymentStatus AS PaymentStatus,
                                 t.TransacTotalAmount
                             FROM transaction t
                             JOIN transactiondetails td ON t.TransactionID = td.TransactionID

@@ -493,7 +493,7 @@ body.modal-blur-fadeout .modal.show {
 
 /* ========== MISC ========== */
 .order-card-container {
-  max-width: 950px;
+  max-width: fit-content;
   margin: 40px auto 0 auto;
 }
 .latest-transaction-details {
