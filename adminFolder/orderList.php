@@ -42,7 +42,13 @@ if(isset($_GET['export']) && $_GET['export'] == 'excel') {
     $paymentStatus = $_GET['paymentStatus'] ?? '';
     $searchTerm = $_GET['searchTerm'] ?? '';
     
+    // Get main filtered transactions
     $transactions = $con->getFilteredTransactions($timePeriod, $orderStatus, $claimStatus, $paymentStatus, $searchTerm, true);
+    
+    // Get additional data for today's specific status reports
+    $unpaidToday = $con->getUnpaidTransactionsToday();
+    $paidToday = $con->getPaidTransactionsToday();
+    $claimedToday = $con->getClaimedTransactionsToday();
     
     // Generate filename with timestamp and filters
     $filterDesc = [];
@@ -53,7 +59,7 @@ if(isset($_GET['export']) && $_GET['export'] == 'excel') {
     if (!empty($paymentStatus)) $filterDesc[] = "Payment-" . $paymentStatus;
     
     $filterString = empty($filterDesc) ? 'All' : implode('-', $filterDesc);
-    $filename = 'Labhidini_Orders_' . $filterString . '_' . date('Y-m-d_H-i-s') . '.csv';
+    $filename = 'Labhidini_Multi_Report_' . $filterString . '_' . date('Y-m-d_H-i-s') . '.csv';
     
     // Set headers for CSV download
     header('Content-Type: text/csv; charset=utf-8');
@@ -67,50 +73,85 @@ if(isset($_GET['export']) && $_GET['export'] == 'excel') {
     // Add BOM for proper UTF-8 encoding in Excel
     fwrite($output, "\xEF\xBB\xBF");
     
-    // Write CSV header
-    fputcsv($output, [
-      'Transaction ID',
-      'Customer Name', 
-      'Date',
-      'Regular',
-      'Extra Heavy Load',
-      'Order Status',
-      'Claim Status',
-      'Payment Status',
-      'Total Amount (PHP)',
-      'Exported On'
-    ]);
-    
-    // Write data rows
-    foreach ($transactions as $transaction) {
-      // Format claim and payment status
-      $claimStatusText = ($transaction['ClaimStatus'] == '2') ? 'Claimed' : 'Unclaimed';
-      $paymentStatusText = ($transaction['PaymentStatus'] == '2') ? 'Paid' : 'Unpaid';
+    // Helper function to write transaction data
+    function writeTransactionData($output, $transactions, $sectionTitle = '') {
+      if (!empty($sectionTitle)) {
+        fputcsv($output, [$sectionTitle]);
+        fputcsv($output, []); // Empty row after title
+      }
       
+      // Write CSV header
       fputcsv($output, [
-        $transaction['TransactionID'],
-        $transaction['CustomerName'],
-        $transaction['FormattedDate'],
-        $transaction['RegularCount'] > 0 ? $transaction['RegularCount'] : '',
-        $transaction['ExtraHeavyCount'] > 0 ? $transaction['ExtraHeavyCount'] : '',
-        $transaction['Status'],
-        $claimStatusText,
-        $paymentStatusText,
-        number_format($transaction['TransacTotalAmount'], 2),
-        date('Y-m-d H:i:s')
+        'Transaction ID',
+        'Customer Name', 
+        'Transaction Date',
+        'Regular',
+        'Extra Heavy Load',
+        'Order Status',
+        'Claim Status',
+        'Claim Date',
+        'Payment Status',
+        'Payment Date',
+        'Total Amount (PHP)'
       ]);
+      
+      // Write data rows
+      foreach ($transactions as $transaction) {
+        // Format claim and payment status
+        $claimStatusText = ($transaction['ClaimStatus'] == '2') ? 'Claimed' : 'Unclaimed';
+        $paymentStatusText = ($transaction['PaymentStatus'] == '2') ? 'Paid' : 'Unpaid';
+        
+        // Get status change dates if available
+        $claimDate = isset($transaction['ClaimDate']) ? $transaction['ClaimDate'] : '';
+        $paymentDate = isset($transaction['PaymentDate']) ? $transaction['PaymentDate'] : '';
+        
+        fputcsv($output, [
+          $transaction['TransactionID'],
+          $transaction['CustomerName'],
+          $transaction['FormattedDate'],
+          $transaction['RegularCount'] > 0 ? $transaction['RegularCount'] : '',
+          $transaction['ExtraHeavyCount'] > 0 ? $transaction['ExtraHeavyCount'] : '',
+          $transaction['Status'],
+          $claimStatusText,
+          $claimDate,
+          $paymentStatusText,
+          $paymentDate,
+          number_format($transaction['TransacTotalAmount'], 2)
+        ]);
+      }
+      
+      // Add summary for this section
+      $totalAmount = array_sum(array_column($transactions, 'TransacTotalAmount'));
+      $totalCount = count($transactions);
+      
+      fputcsv($output, []); // Empty row
+      fputcsv($output, ['SECTION SUMMARY']);
+      fputcsv($output, ['Total Transactions', $totalCount]);
+      fputcsv($output, ['Total Amount', '', '', '', '', '', '', '', '', '', number_format($totalAmount, 2)]);
+      fputcsv($output, []); // Empty row after summary
+      fputcsv($output, []); // Additional empty row for separation
     }
     
-    // Add summary row
-    $totalAmount = array_sum(array_column($transactions, 'TransacTotalAmount'));
-    $totalCount = count($transactions);
+    // Write main filtered transactions section
+    writeTransactionData($output, $transactions, 'MAIN REPORT - ' . strtoupper($filterString) . ' TRANSACTIONS');
     
-    fputcsv($output, []); // Empty row
-    fputcsv($output, ['SUMMARY', '', '', '', '', '', '', '', '']);
-    fputcsv($output, ['Total Transactions', $totalCount, '', '', '', '', '', '', '']);
-    fputcsv($output, ['Total Amount', '', '', '', '', '', '', number_format($totalAmount, 2), '']);
-    fputcsv($output, ['Export Date', date('Y-m-d H:i:s'), '', '', '', '', '', '', '']);
-    fputcsv($output, ['Exported By', $_SESSION['adminName'], '', '', '', '', '', '', '']);
+    // Write unpaid transactions for today
+    writeTransactionData($output, $unpaidToday, 'CURRENTLY UNPAID TRANSACTIONS (' . count($unpaidToday) . ' total)');
+    
+    // Write paid transactions for today
+    writeTransactionData($output, $paidToday, 'PAID TODAY - ' . date('Y-m-d') . ' (' . count($paidToday) . ' transactions)');
+    
+    // Write claimed transactions for today
+    writeTransactionData($output, $claimedToday, 'CLAIMED TODAY - ' . date('Y-m-d') . ' (' . count($claimedToday) . ' transactions)');
+    
+    // Overall summary
+    fputcsv($output, ['===== OVERALL EXPORT SUMMARY =====']);
+    fputcsv($output, ['Export Date', date('Y-m-d H:i:s')]);
+    fputcsv($output, ['Exported By', $_SESSION['adminName']]);
+    fputcsv($output, ['Main Report Count', count($transactions)]);
+    fputcsv($output, ['Unpaid Today Count', count($unpaidToday)]);
+    fputcsv($output, ['Paid Today Count', count($paidToday)]);
+    fputcsv($output, ['Claimed Today Count', count($claimedToday)]);
     
     fclose($output);
     exit();

@@ -166,10 +166,22 @@ class database{
             // Determine which column to update based on status type
             switch($statusType) {
                 case 'claim':
-                    $query = $con->prepare("UPDATE transaction SET ClaimStatus = ?, UA_ID = ? WHERE TransactionID = ?");
+                    if ($statusValue == '2') {
+                        // Setting to claimed - update both status and date
+                        $query = $con->prepare("UPDATE transaction SET ClaimStatus = ?, ClaimStatusDate = NOW(), UA_ID = ? WHERE TransactionID = ?");
+                    } else {
+                        // Setting to unclaimed - clear the date
+                        $query = $con->prepare("UPDATE transaction SET ClaimStatus = ?, ClaimStatusDate = NULL, UA_ID = ? WHERE TransactionID = ?");
+                    }
                     break;
                 case 'payment':
-                    $query = $con->prepare("UPDATE transaction SET PaymentStatus = ?, UA_ID = ? WHERE TransactionID = ?");
+                    if ($statusValue == '2') {
+                        // Setting to paid - update both status and date
+                        $query = $con->prepare("UPDATE transaction SET PaymentStatus = ?, PaymentStatusDate = NOW(), UA_ID = ? WHERE TransactionID = ?");
+                    } else {
+                        // Setting to unpaid - clear the date
+                        $query = $con->prepare("UPDATE transaction SET PaymentStatus = ?, PaymentStatusDate = NULL, UA_ID = ? WHERE TransactionID = ?");
+                    }
                     break;
                 case 'status':
                 default:
@@ -211,7 +223,7 @@ class database{
                             LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
                             LEFT JOIN status s ON t.StatusID = s.StatusID
                             GROUP BY t.TransactionID, t.CustomerName, t.TransactionTimestamp, s.StatusName, t.StatusID, t.ClaimStatus, t.PaymentStatus, t.TransacTotalAmount
-                            ORDER BY t.TransactionID DESC;
+                            ORDER BY t.TransactionTimestamp DESC;
                             ");
         
         // Execute the statement
@@ -677,6 +689,106 @@ class database{
             
         } catch (Exception $e) {
             error_log("Debug error: " . $e->getMessage());
+        }
+    }
+
+    // Function to get unpaid transactions for today
+    function getUnpaidTransactionsToday(){
+        try {
+            $con = $this->opencon();
+            
+            $query = "SELECT 
+                        t.TransactionID,
+                        t.CustomerName AS CustomerName,
+                        DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 1 THEN td.TDQuantity ELSE 0 END), 0) AS RegularCount,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 2 THEN td.TDQuantity ELSE 0 END), 0) AS ExtraHeavyCount,
+                        s.StatusName AS Status,
+                        t.StatusID AS StatusID,
+                        t.ClaimStatus AS ClaimStatus,
+                        t.PaymentStatus AS PaymentStatus,
+                        t.TransacTotalAmount
+                    FROM transaction t
+                    LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
+                    LEFT JOIN status s ON t.StatusID = s.StatusID
+                    WHERE t.PaymentStatus = 1
+                    GROUP BY t.TransactionID 
+                    ORDER BY t.TransactionTimestamp DESC";
+            
+            $stmt = $con->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error in getUnpaidTransactionsToday: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // Function to get paid transactions for today
+    function getPaidTransactionsToday(){
+        try {
+            $con = $this->opencon();
+            
+            $query = "SELECT 
+                        t.TransactionID,
+                        t.CustomerName AS CustomerName,
+                        DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 1 THEN td.TDQuantity ELSE 0 END), 0) AS RegularCount,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 2 THEN td.TDQuantity ELSE 0 END), 0) AS ExtraHeavyCount,
+                        s.StatusName AS Status,
+                        t.StatusID AS StatusID,
+                        t.ClaimStatus AS ClaimStatus,
+                        t.PaymentStatus AS PaymentStatus,
+                        t.TransacTotalAmount,
+                        DATE_FORMAT(t.PaymentStatusDate, '%M %d, %Y at %h:%i %p') AS PaymentDate
+                    FROM transaction t
+                    LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
+                    LEFT JOIN status s ON t.StatusID = s.StatusID
+                    WHERE DATE(t.PaymentStatusDate) = CURDATE() 
+                    AND t.PaymentStatus = 2
+                    GROUP BY t.TransactionID 
+                    ORDER BY t.PaymentStatusDate DESC";
+            
+            $stmt = $con->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error in getPaidTransactionsToday: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // Function to get claimed transactions for today
+    function getClaimedTransactionsToday(){
+        try {
+            $con = $this->opencon();
+            
+            $query = "SELECT 
+                        t.TransactionID,
+                        t.CustomerName AS CustomerName,
+                        DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 1 THEN td.TDQuantity ELSE 0 END), 0) AS RegularCount,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 2 THEN td.TDQuantity ELSE 0 END), 0) AS ExtraHeavyCount,
+                        s.StatusName AS Status,
+                        t.StatusID AS StatusID,
+                        t.ClaimStatus AS ClaimStatus,
+                        t.PaymentStatus AS PaymentStatus,
+                        t.TransacTotalAmount,
+                        DATE_FORMAT(t.ClaimStatusDate, '%M %d, %Y at %h:%i %p') AS ClaimDate
+                    FROM transaction t
+                    LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
+                    LEFT JOIN status s ON t.StatusID = s.StatusID
+                    WHERE DATE(t.ClaimStatusDate) = CURDATE() 
+                    AND t.ClaimStatus = 2
+                    GROUP BY t.TransactionID 
+                    ORDER BY t.ClaimStatusDate DESC";
+            
+            $stmt = $con->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Error in getClaimedTransactionsToday: " . $e->getMessage());
+            return [];
         }
     }
 
