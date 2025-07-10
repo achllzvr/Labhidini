@@ -72,7 +72,8 @@ if(isset($_GET['export']) && $_GET['export'] == 'excel') {
       'Transaction ID',
       'Customer Name', 
       'Date',
-      'Services',
+      'Regular',
+      'Extra Heavy Load',
       'Order Status',
       'Claim Status',
       'Payment Status',
@@ -90,7 +91,8 @@ if(isset($_GET['export']) && $_GET['export'] == 'excel') {
         $transaction['TransactionID'],
         $transaction['CustomerName'],
         $transaction['FormattedDate'],
-        $transaction['Services'],
+        $transaction['RegularCount'] > 0 ? $transaction['RegularCount'] : '',
+        $transaction['ExtraHeavyCount'] > 0 ? $transaction['ExtraHeavyCount'] : '',
         $transaction['Status'],
         $claimStatusText,
         $paymentStatusText,
@@ -156,7 +158,8 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'filter') {
         'TransactionID' => $transaction['TransactionID'],
         'CustomerName' => $transaction['CustomerName'],
         'FormattedDate' => $transaction['FormattedDate'],
-        'Services' => $transaction['Services'],
+        'RegularCount' => $transaction['RegularCount'],
+        'ExtraHeavyCount' => $transaction['ExtraHeavyCount'],
         'Status' => $transaction['Status'],
         'StatusID' => $transaction['StatusID'],
         'ClaimStatus' => $claimStatusValue,
@@ -589,7 +592,8 @@ if(isset($_POST['updateStatusButton'])) {
                 <th scope="col">ID</th>
                 <th scope="col">Customer Name</th>
                 <th scope="col">Date</th>
-                <th scope="col">Service</th>
+                <th scope="col">Regular</th>
+                <th scope="col">Extra Heavy Load</th>
                 <th scope="col">Status</th>
                 <th scope="col">Claim Status</th>
                 <th scope="col">Payment Status</th>
@@ -598,8 +602,8 @@ if(isset($_POST['updateStatusButton'])) {
             </thead>
             <tbody id="transactionTableBody">
               <?php
-              // Load initial data with default filter (today's transactions)
-              $transactions = $con->getFilteredTransactions('day', '', '', '', '');
+              // Load initial data with default filter (all transactions to show something)
+              $transactions = $con->getFilteredTransactions('all', '', '', '', '');
               foreach ($transactions as $transaction) {
                 $status = strtolower($transaction['Status']);
                 $badgeClass = 'in-progress'; // default
@@ -622,7 +626,8 @@ if(isset($_POST['updateStatusButton'])) {
                   <td><?php echo $transaction['TransactionID']; ?></td>
                   <td><?php echo $transaction['CustomerName']; ?></td>
                   <td><?php echo $transaction['FormattedDate']; ?></td>
-                  <td><?php echo $transaction['Services']; ?></td>
+                  <td><?php echo ($transaction['RegularCount'] > 0) ? $transaction['RegularCount'] : ''; ?></td>
+                  <td><?php echo ($transaction['ExtraHeavyCount'] > 0) ? $transaction['ExtraHeavyCount'] : ''; ?></td>
                   <td>
                     <span class="glass-badge <?php echo $badgeClass; ?>" data-status="<?php echo $transaction['StatusID']; ?>">
                       <?php echo $transaction['Status']; ?>
@@ -864,7 +869,8 @@ if(isset($_POST['updateStatusButton'])) {
               <td>${transaction.TransactionID}</td>
               <td>${transaction.CustomerName}</td>
               <td>${transaction.FormattedDate}</td>
-              <td>${transaction.Services}</td>
+              <td>${transaction.RegularCount > 0 ? transaction.RegularCount : ''}</td>
+              <td>${transaction.ExtraHeavyCount > 0 ? transaction.ExtraHeavyCount : ''}</td>
               <td>
                 <span class="glass-badge ${transaction.badgeClass}" data-status="${transaction.StatusID}">
                   ${transaction.Status}

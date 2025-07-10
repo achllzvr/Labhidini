@@ -195,25 +195,22 @@ class database{
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get Transaction data - uses CustomerName from transaction table
+        // Prepare SQL statement to get Transaction data - uses CustomerName from transaction table with separate service counts
         $stmt = $con->prepare("SELECT 
                                 t.TransactionID,
                                 t.CustomerName AS CustomerName,
                                 DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                                GROUP_CONCAT(
-                                    DISTINCT CONCAT(ls.LaundryService_Name, ' (x', td.TDQuantity, ')') 
-                                    SEPARATOR ', '
-                                ) AS Services,
+                                COALESCE(SUM(CASE WHEN td.LaundryID = 1 THEN td.TDQuantity ELSE 0 END), 0) AS RegularCount,
+                                COALESCE(SUM(CASE WHEN td.LaundryID = 2 THEN td.TDQuantity ELSE 0 END), 0) AS ExtraHeavyCount,
                                 s.StatusName AS Status,
                                 t.StatusID AS StatusID,
                                 t.ClaimStatus AS ClaimStatus,
                                 t.PaymentStatus AS PaymentStatus,
                                 t.TransacTotalAmount
                             FROM transaction t
-                            JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                            JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
-                            JOIN status s ON t.StatusID = s.StatusID
-                            GROUP BY t.TransactionID
+                            LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
+                            LEFT JOIN status s ON t.StatusID = s.StatusID
+                            GROUP BY t.TransactionID, t.CustomerName, t.TransactionTimestamp, s.StatusName, t.StatusID, t.ClaimStatus, t.PaymentStatus, t.TransacTotalAmount
                             ORDER BY t.TransactionID DESC;
                             ");
         
@@ -532,15 +529,13 @@ class database{
             // Open connection with database
             $con = $this->opencon();
 
-            // Base query - uses CustomerName from transaction table
+            // Base query - uses CustomerName from transaction table with separate service counts
             $query = "SELECT 
                         t.TransactionID,
                         t.CustomerName AS CustomerName,
                         DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                        GROUP_CONCAT(
-                            DISTINCT CONCAT(ls.LaundryService_Name, ' (x', td.TDQuantity, ')') 
-                            SEPARATOR ', '
-                        ) AS Services,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 1 THEN td.TDQuantity ELSE 0 END), 0) AS RegularCount,
+                        COALESCE(SUM(CASE WHEN td.LaundryID = 2 THEN td.TDQuantity ELSE 0 END), 0) AS ExtraHeavyCount,
                         s.StatusName AS Status,
                         t.StatusID AS StatusID,
                         t.ClaimStatus AS ClaimStatus,
@@ -548,7 +543,6 @@ class database{
                         t.TransacTotalAmount
                     FROM transaction t
                     LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                    LEFT JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
                     LEFT JOIN status s ON t.StatusID = s.StatusID
                     WHERE 1=1";
 
