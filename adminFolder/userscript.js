@@ -130,17 +130,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-// services modal logic
-document.addEventListener("DOMContentLoaded", function () {
-  var servicesCard = document.getElementById("servicesCard");
-  if (servicesCard) {
-    servicesCard.addEventListener("click", function () {
-      var modal = new bootstrap.Modal(document.getElementById("servicesModal"));
-      modal.show();
-    });
-  }
-});
-
 // modal blur effect logic
 document.addEventListener("DOMContentLoaded", function () {
   document.body.classList.remove("modal-blur-fadeout");

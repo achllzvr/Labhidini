@@ -118,43 +118,6 @@ class database{
 
     }
 
-    // Function to add a new Service (addService.php)
-    function addService($serviceName, $serviceDesc, $statusID, $serviceType){
-        $con = $this->opencon();
-    
-        try{
-            $con->beginTransaction();
-    
-            $stmt = $con->prepare("INSERT INTO laundryservice (LaundryService_Name, LaundryService_Desc, StatusID, LaundryService_Type) VALUES (?,?,?,?)");
-            $stmt->execute([$serviceName, $serviceDesc, $statusID, $serviceType]);
-    
-            $userID = $con->lastInsertId();
-            $con->commit();
-    
-            return $userID;   
-        }catch (PDOException $e){
-            $con->rollBack();
-            return false;
-        }
-    }
-
-        // Check if Service exists
-        function isServiceExists($serviceName){
-            // Open connection with database
-            $con = $this->opencon();
-
-            // Prepare SQL statement to check if Service exists
-            $stmt = $con->prepare("SELECT COUNT(*) FROM laundryservice WHERE LaundryService_Name = ?");
-            // Executes the statement
-            $stmt->execute([$serviceName]);
-
-            // Fetch the count of rows and its values and assign to $count
-            $count = $stmt->fetchColumn();
-
-            // Check if the count is greater than 0 and return true if greater than zero, else false
-            return $count > 0;
-        }
-    
     // Function to get Transaction data (not Transaction Details) by ID (*file used*)
     function getTransactionByID($TransactionID){
 
@@ -179,8 +142,8 @@ class database{
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get Transaction data by ID
-        $stmt = $con->prepare("SELECT * FROM transactionDetails WHERE TransactionID = ?");
+        // Prepare SQL statement to get Transaction details by ID
+        $stmt = $con->prepare("SELECT * FROM transactiondetails WHERE TransactionID = ?");
         // Execute the statement with the student ID
         $stmt->execute([$TransactionID]);
 
@@ -232,12 +195,15 @@ class database{
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get Transaction data by ID
+        // Prepare SQL statement to get Transaction data - uses TransacCustomerName from transaction table
         $stmt = $con->prepare("SELECT 
                                 t.TransactionID,
-                                CONCAT(c.CustomerFN, ' ', c.CustomerLN) AS CustomerName,
+                                t.TransacCustomerName AS CustomerName,
                                 DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                                GROUP_CONCAT(ls.LaundryService_Name SEPARATOR ', ') AS Services,
+                                GROUP_CONCAT(
+                                    DISTINCT CONCAT(ls.LaundryService_Name, ' (x', td.TDQuantity, ')') 
+                                    SEPARATOR ', '
+                                ) AS Services,
                                 s.StatusName AS Status,
                                 t.StatusID AS StatusID,
                                 t.ClaimStatus AS ClaimStatus,
@@ -245,7 +211,6 @@ class database{
                                 t.TransacTotalAmount
                             FROM transaction t
                             JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                            JOIN customer c ON t.CustomerID = c.CustomerID
                             JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
                             JOIN status s ON t.StatusID = s.StatusID
                             GROUP BY t.TransactionID
@@ -262,87 +227,20 @@ class database{
         return $transaction_data;
     }
 
-    // Function to get recent Transaction data (not Transaction Details) by ID
-    function getRecentTransactions(){
-
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get Transaction data by ID
-        $stmt = $con->prepare("SELECT 
-                                t.TransactionID,
-                                CONCAT(c.CustomerFN, ' ', c.CustomerLN) AS CustomerName,
-                                DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                                GROUP_CONCAT(ls.LaundryService_Name SEPARATOR ', ') AS Services,
-                                s.StatusName AS Status,
-                                t.TransacTotalAmount
-                            FROM transaction t
-                            JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                            JOIN customer c ON t.CustomerID = c.CustomerID
-                            JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
-                            JOIN status s ON t.StatusID = s.StatusID
-                            GROUP BY t.TransactionID
-                            ORDER BY t.TransactionTimestamp DESC
-                            LIMIT 10;
-                            ");
-        
-        // Execute the statement
-        $stmt->execute();
-
-        // Fetch the student data as an associative array
-        $transaction_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the student data
-        return $transaction_data;
-    }
-
-    // Function to get Transaction data (not Transaction Details) by ID
-    function getLatestOrder(){
-
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get Transaction data by ID
-        $stmt = $con->prepare("SELECT 
-                                t.TransactionID,
-                                CONCAT(c.CustomerFN, ' ', c.CustomerLN) AS CustomerName,
-                                DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                                GROUP_CONCAT(ls.LaundryService_Name SEPARATOR ', ') AS Services,
-                                s.StatusName AS Status,
-                                t.TransacTotalAmount
-                            FROM transaction t
-                            JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                            JOIN customer c ON t.CustomerID = c.CustomerID
-                            JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
-                            JOIN status s ON t.StatusID = s.StatusID
-                            GROUP BY t.TransactionID
-                            ORDER BY t.TransactionTimestamp DESC
-                            LIMIT 1;
-                            ");
-        
-        // Execute the statement
-        $stmt->execute();
-
-        // Fetch the student data as an associative array
-        $transaction_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the student data
-        return $transaction_data;
-    }
-
-    // Function to get ALL services
+    // Function to get ALL active services with current prices for newOrder.php
     function getAllServices(){
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get all Services
+        // Prepare SQL statement to get all active Services with their latest prices
         $stmt = $con->prepare("SELECT
                 ls.LaundryID,
                 ls.LaundryService_Type as ServiceType,
-                CONCAT(ls.LaundryService_Name, ' - ', ls.LaundryService_Desc) AS ServiceName,
-                pcl.Price as Price
+                ls.LaundryService_Name as ServiceName,
+                ls.LaundryService_Desc as ServiceDesc,
+                pc.Price as Price
             FROM laundryservice ls
-            LEFT JOIN pricechangelog pcl ON ls.LaundryID = pcl.LaundryID
+            JOIN pricechangelog pc ON ls.LaundryID = pc.LaundryID
         ");
 
         // Execute the statement
@@ -356,13 +254,13 @@ class database{
     }
 
     // Fetch all customer names and ID for dropdown
+    // Fetch all customer names from transaction table
     function getAllCustomers(){
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get all Customers
-        $stmt = $con->prepare("SELECT CustomerID, 
-        CONCAT(CustomerFN, ' ', CustomerLN) AS FullName FROM customer");
+        // Prepare SQL statement to get unique customer names from transactions
+        $stmt = $con->prepare("SELECT DISTINCT TransacCustomerName AS FullName FROM transaction WHERE TransacCustomerName IS NOT NULL ORDER BY TransacCustomerName");
         
         // Execute the statement
         $stmt->execute();
@@ -394,7 +292,34 @@ class database{
         return $payment_methods;
     }
 
-    // Function to insert a new Transaction
+    // Function to insert a new Transaction with customer name
+    function newOrderWithCustomerName($customerName, $admin_id, $paymentMethodID, $subtotal, $discount, $totalAmount){
+
+        // Open connection with database
+        $con = $this->opencon();
+
+        try{
+            $con->beginTransaction();
+
+            // Prepare SQL statement to insert a new Transaction with customer name
+            $stmt = $con->prepare("INSERT INTO transaction 
+                                    (TransacCustomerName, UA_ID, PaymentMethodID, StatusID, TransacSubtotal, TransacDiscount, TransacTotalAmount) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$customerName, $admin_id, $paymentMethodID, 1, $subtotal, $discount, $totalAmount]);
+
+            // Get the last inserted Transaction ID
+            $transactionID = $con->lastInsertId();
+            $con->commit();
+
+            return $transactionID;   
+        }catch (PDOException $e){
+            $con->rollBack();
+            return false;
+        }
+
+    }
+
+    // Function to insert a new Transaction (original with CustomerID)
     function newOrder($customerID, $admin_id, $paymentMethodID, $subtotal, $discount, $totalAmount){
 
         // Open connection with database
@@ -440,6 +365,25 @@ class database{
         return $transactionID;
     }
 
+    // Get the latest Transaction ID for a specific Customer by name
+    function getLatestTransactionIDByName($customerName){
+
+        // Open connection with database
+        $con = $this->opencon();
+
+        // Prepare SQL statement to get the latest Transaction ID for a specific Customer by name
+        $stmt = $con->prepare("SELECT TransactionID FROM transaction WHERE TransacCustomerName = ? ORDER BY TransactionTimestamp DESC LIMIT 1");
+        
+        // Execute the statement
+        $stmt->execute([$customerName]);
+
+        // Fetch the latest Transaction ID
+        $transactionID = $stmt->fetchColumn();
+
+        // Return the Transaction ID
+        return $transactionID;
+    }
+
     // Function to insert Transaction Details
     function insertTransactionDetails($transactionID, $laundryID, $quantity){
 
@@ -463,15 +407,14 @@ class database{
 
     }
 
-    // Function to get Customer List
+    // Function to get Customer List from transaction table
     function getCustomerList(){
 
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get all Customers
-        $stmt = $con->prepare("SELECT CustomerID, 
-                                CONCAT(CustomerFN, ' ', CustomerLN) AS FullName FROM customer");
+        // Prepare SQL statement to get unique customer names from transactions
+        $stmt = $con->prepare("SELECT DISTINCT TransacCustomerName AS FullName FROM transaction WHERE TransacCustomerName IS NOT NULL ORDER BY TransacCustomerName");
         
         // Execute the statement
         $stmt->execute();
@@ -510,115 +453,6 @@ class database{
             'labels' => $labels,
             'data' => $salesData
         ];
-    }
-
-    // Function to get all Full Service & Drop-Off Service
-    function getAllServicesList1(){
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get all Services
-        $stmt = $con->prepare("SELECT 
-                                LaundryID as laundry_id,
-                                LaundryService_Name as laundry_name,
-                                LaundryService_Desc as laundry_desc
-        FROM laundryservice WHERE StatusID = 6 and LaundryService_Type = 1");
-        
-        // Execute the statement
-        $stmt->execute();
-
-        // Fetch all services as an associative array
-        $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the services data
-        return $services;
-    }
-
-    // Function to get all Self Service Services
-    function getAllServicesList2(){
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get all Services
-        $stmt = $con->prepare("SELECT 
-                                LaundryID as laundry_id,
-                                LaundryService_Name as laundry_name,
-                                LaundryService_Desc as laundry_desc
-        FROM laundryservice WHERE StatusID = 6 and LaundryService_Type = 2");
-
-        // Execute the statement
-        $stmt->execute();
-
-        // Fetch all services as an associative array
-        $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the services data
-        return $services;
-    }
-
-    // Function to get service by ID
-    function getServiceByID($serviceID){
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get Service data by ID
-        $stmt = $con->prepare("SELECT 
-                                LaundryID as laundry_id,
-                                LaundryService_Name as laundry_name,
-                                LaundryService_Desc as laundry_desc,
-                                StatusID as status_id
-                                FROM laundryservice WHERE LaundryID = ?");
-        
-        // Execute the statement with the service ID
-        $stmt->execute([$serviceID]);
-
-        // Fetch the service data as an associative array
-        $service_data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // Return the service data
-        return $service_data;
-    }
-
-    // Function to update Service data
-    function updateService($serviceID, $serviceName, $serviceDesc){
-        // Open connection with database
-        $con = $this->opencon();
-
-        try{
-            $con->beginTransaction();
-
-            $stmt = $con->prepare("UPDATE laundryservice SET LaundryService_Name = ?, LaundryService_Desc = ? WHERE LaundryID = ?");
-            $stmt->execute([$serviceName, $serviceDesc, $serviceID]);
-
-            $con->commit();
-
-            return true;   
-        }catch (PDOException $e){
-            $con->rollBack();
-            return false;
-        }
-
-    }
-
-    // Function to delete Service data
-    function deleteService($serviceID){
-        // Open connection with database
-        $con = $this->opencon();
-
-        try{
-            $con->beginTransaction();
-
-            $stmt = $con->prepare("UPDATE laundryservice SET StatusID = 7 WHERE LaundryID = ?");
-            $stmt->execute([$serviceID]);
-
-            $con->commit();
-
-            return true;   
-        }catch (PDOException $e){
-            $con->rollBack();
-            return false;
-        }
-
     }
 
     // Function to get all Statuses
@@ -661,38 +495,30 @@ class database{
             return $lastAdminID;
         }
 
-    // Function to get Services list (used by admin for display purposes)
-    function getPremiumServicesList(){
+    // Function to get all Services and their prices for newOrder.php
+    function getAllServicesWithPrices(){
         // Open connection with database
         $con = $this->opencon();
-
-        // Prepare SQL statement to get all Services
-        $stmt = $con->prepare("SELECT * FROM laundryservice WHERE LaundryService_Type = 1 AND StatusID = 6");
-        
+        // Prepare SQL statement to get all active Services with their latest prices
+        $stmt = $con->prepare("SELECT
+                ls.LaundryID,
+                ls.LaundryService_Type as ServiceType,
+                ls.LaundryService_Name as ServiceName,
+                ls.LaundryService_Desc as ServiceDesc,
+                COALESCE(pcl.Price, 0.00) as Price
+            FROM laundryservice ls
+            LEFT JOIN (
+                SELECT LaundryID, Price, 
+                       ROW_NUMBER() OVER (PARTITION BY LaundryID ORDER BY PriceChangeID DESC) as rn
+                FROM pricechangelog
+            ) pcl ON ls.LaundryID = pcl.LaundryID AND pcl.rn = 1
+            WHERE ls.StatusID = 6
+            ORDER BY ls.LaundryService_Type, ls.LaundryService_Name
+        ");
         // Execute the statement
         $stmt->execute();
-
         // Fetch all services as an associative array
         $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Return the services data
-        return $services;
-    }
-
-    // Function to get Services list (used by admin for display purposes)
-    function getRegularServicesList(){
-        // Open connection with database
-        $con = $this->opencon();
-
-        // Prepare SQL statement to get all Services
-        $stmt = $con->prepare("SELECT * FROM laundryservice WHERE LaundryService_Type = 2 AND StatusID = 6");
-        
-        // Execute the statement
-        $stmt->execute();
-
-        // Fetch all services as an associative array
-        $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         // Return the services data
         return $services;
     }
@@ -706,22 +532,24 @@ class database{
             // Open connection with database
             $con = $this->opencon();
 
-            // Base query
+            // Base query - uses TransacCustomerName from transaction table (no customer table join needed)
             $query = "SELECT 
                         t.TransactionID,
-                        CONCAT(c.CustomerFN, ' ', c.CustomerLN) AS CustomerName,
+                        t.TransacCustomerName AS CustomerName,
                         DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
-                        GROUP_CONCAT(DISTINCT ls.LaundryService_Name SEPARATOR ', ') AS Services,
+                        GROUP_CONCAT(
+                            DISTINCT CONCAT(ls.LaundryService_Name, ' (x', td.TDQuantity, ')') 
+                            SEPARATOR ', '
+                        ) AS Services,
                         s.StatusName AS Status,
                         t.StatusID AS StatusID,
                         t.ClaimStatus AS ClaimStatus,
                         t.PaymentStatus AS PaymentStatus,
                         t.TransacTotalAmount
                     FROM transaction t
-                    JOIN transactiondetails td ON t.TransactionID = td.TransactionID
-                    JOIN customer c ON t.CustomerID = c.CustomerID
-                    JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
-                    JOIN status s ON t.StatusID = s.StatusID
+                    LEFT JOIN transactiondetails td ON t.TransactionID = td.TransactionID
+                    LEFT JOIN laundryservice ls ON td.LaundryID = ls.LaundryID
+                    LEFT JOIN status s ON t.StatusID = s.StatusID
                     WHERE 1=1";
 
             $params = [];
@@ -766,7 +594,7 @@ class database{
 
             // Search term filter (Customer name or Transaction ID)
             if (!empty($searchTerm)) {
-                $query .= " AND (CONCAT(c.CustomerFN, ' ', c.CustomerLN) LIKE ? OR t.TransactionID LIKE ?)";
+                $query .= " AND (t.TransacCustomerName LIKE ? OR t.TransactionID LIKE ?)";
                 $searchParam = '%' . $searchTerm . '%';
                 $params[] = $searchParam;
                 $params[] = $searchParam;
@@ -798,6 +626,63 @@ class database{
         } catch (Exception $e) {
             error_log("Error in getFilteredTransactions: " . $e->getMessage());
             return [];
+        }
+    }
+
+    // Fallback function to get basic services (simplified query)
+    function getServicesBasic(){
+        try {
+            // Open connection with database
+            $con = $this->opencon();
+
+            // Simple query to get services
+            $stmt = $con->prepare("SELECT
+                    LaundryID,
+                    LaundryService_Type as ServiceType,
+                    LaundryService_Name as ServiceName,
+                    LaundryService_Desc as ServiceDesc,
+                    50.00 as Price
+                FROM laundryservice
+                WHERE StatusID = 6 OR StatusID IS NULL
+                ORDER BY LaundryService_Type, LaundryService_Name
+            ");
+
+            // Execute the statement
+            $stmt->execute();
+
+            // Fetch all services as an associative array
+            $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Return the services data
+            return $services;
+        } catch (Exception $e) {
+            error_log("Error in getServicesBasic: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    // Debug function to check database tables and data
+    function debugDatabaseState(){
+        try {
+            $con = $this->opencon();
+            
+            $tables = ['transaction', 'transactiondetails', 'laundryservice', 'status'];
+            
+            foreach($tables as $table) {
+                $stmt = $con->prepare("SELECT COUNT(*) as count FROM $table");
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                error_log("Table $table has " . $result['count'] . " records");
+            }
+            
+            // Test a simple transaction query
+            $stmt = $con->prepare("SELECT COUNT(*) as count FROM transaction");
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            error_log("Direct transaction count: " . $result['count']);
+            
+        } catch (Exception $e) {
+            error_log("Debug error: " . $e->getMessage());
         }
     }
 

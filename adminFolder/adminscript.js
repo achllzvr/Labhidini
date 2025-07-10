@@ -71,39 +71,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-// filter orders logic
-document.addEventListener("DOMContentLoaded", function () {
-  function getStatusFromRow(row) {
-    const badge =
-      row.querySelector(".glass-badge") ||
-      row.querySelector(".badge");
-    if (!badge) return "";
-    return badge.textContent.trim();
-  }
-  function filterOrders() {
-    const checkedStatuses = Array.from(
-      document.querySelectorAll(".status-checkbox:checked")
-    ).map((cb) => cb.value);
-    const table = document.getElementById("ordersTable");
-    if (!table) return;
-    const rows = table.querySelectorAll("tbody tr");
-    rows.forEach((row) => {
-      const status = getStatusFromRow(row);
-      row.style.display = checkedStatuses.includes(status) ? "" : "none";
-    });
-  }
-  const applyBtn = document.getElementById("applyFilterBtn");
-  if (applyBtn) {
-    applyBtn.addEventListener("click", function () {
-      filterOrders();
-      const modal = bootstrap.Modal.getOrCreateInstance(
-        document.getElementById("filterModal")
-      );
-      modal.hide();
-    });
-  }
-});
-
 // about/terms/contact modal logic
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("aboutUsCard").addEventListener("click", function () {
@@ -129,17 +96,6 @@ document.addEventListener("DOMContentLoaded", function () {
       );
       contactModal.show();
     });
-});
-
-// services modal logic
-document.addEventListener("DOMContentLoaded", function () {
-  var servicesCard = document.getElementById("servicesCard");
-  if (servicesCard) {
-    servicesCard.addEventListener("click", function () {
-      var modal = new bootstrap.Modal(document.getElementById("servicesModal"));
-      modal.show();
-    });
-  }
 });
 
 // modal blur effect logic
@@ -205,16 +161,6 @@ document.addEventListener("DOMContentLoaded", function () {
   if (orderListCard) {
     orderListCard.addEventListener("click", function () {
       window.location.href = "orderList.php";
-    });
-  }
-});
-
-// edit services button click (redirect)
-document.addEventListener("DOMContentLoaded", function () {
-  var editServicesBtn = document.getElementById("editServicesBtn");
-  if (editServicesBtn) {
-    editServicesBtn.addEventListener("click", function () {
-      window.location.href = "services.php";
     });
   }
 });

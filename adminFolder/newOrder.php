@@ -36,29 +36,35 @@ $sweetAlertConfig = "";
 if (isset($_POST['placeOrderBtn'])) {
      
       // Get the form data
-      $customerID = $_POST['selectedCustomerId'];
+      $customerName = trim($_POST['customerName']);
       $admin_id = $_SESSION['adminID'];
       $paymentMethodID = $_POST['selectedPaymentMethodId'];
-      $subtotal = $_POST['subtotal'];
-      $discount = $_POST['discount'];
       $totalAmount = $_POST['total_amount'];
+      $subtotal = $totalAmount; // Set subtotal equal to total since we removed discount
+      $discount = 0; // No discount functionality
+      
+      // Get service counts
+      $regularCount = intval($_POST['regularServiceCount'] ?? 0);
+      $heavyCount = intval($_POST['heavyServiceCount'] ?? 0);
 
-      // Insert into the orders table
-      $userID = $con->newOrder($customerID, $admin_id, $paymentMethodID, $subtotal, $discount, $totalAmount);
+      // Insert into the orders table using customer name
+      $userID = $con->newOrderWithCustomerName($customerName, $admin_id, $paymentMethodID, $subtotal, $discount, $totalAmount);
 
-      // Get the latest transaction ID for the customer (Last inserted order)
-      $transactionID = $con->getLatestTransactionID($customerID);
-      echo $transactionID;
-      $transacID = $transactionID;
-
-      // For each selected service, insert into the transaction details
-      foreach (json_decode($_POST['selectedServices'], true) as $service) {
-        $serviceID = $service['id'];
-        $quantity = $service['quantity'];
-        $price = $service['price'];
-        
-        // Insert into transaction details
-        $userID2 = $con->insertTransactionDetails($transactionID, $serviceID, $quantity);
+      // Get the latest transaction ID for the customer (Last inserted order) using customer name
+      $transactionID = $con->getLatestTransactionIDByName($customerName);
+      
+      $userID2 = true; // Initialize as true for success checking
+      
+      // Insert Regular Service if count > 0
+      if ($regularCount > 0) {
+        // Assuming service ID 1 for Regular Service, price 120.00
+        $userID2 = $con->insertTransactionDetails($transactionID, 1, $regularCount) && $userID2;
+      }
+      
+      // Insert Extra Heavy Load if count > 0  
+      if ($heavyCount > 0) {
+        // Assuming service ID 2 for Extra Heavy Load, price 175.00
+        $userID2 = $con->insertTransactionDetails($transactionID, 2, $heavyCount) && $userID2;
       }
 
       if ($userID && $userID2) {
@@ -89,6 +95,7 @@ if (isset($_POST['placeOrderBtn'])) {
     }
 
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -174,11 +181,9 @@ if (isset($_POST['placeOrderBtn'])) {
         background: #e6f7f5;
       }
    
-      #addServiceBtn,
       #placeOrderBtn {
         transition: background 0.2s;
       }
-      #addServiceBtn:hover,
       #placeOrderBtn:hover {
         background: #2C4744 !important;
       }
@@ -200,7 +205,7 @@ if (isset($_POST['placeOrderBtn'])) {
         box-shadow: none !important;
       }
 
-      #customerInput::placeholder,
+      #customerNameInput::placeholder,
       #paymentMethodInput::placeholder {
         color: #75908E !important;
         opacity: 1;
@@ -230,31 +235,210 @@ if (isset($_POST['placeOrderBtn'])) {
       select.form-select.service-select {
         color-scheme: light;
       }
-      select.form-select.service-select {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        background-image:
-          url("data:image/svg+xml;charset=UTF-8,<svg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M4 6L8 10L12 6' stroke='%23395C58' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-        background-repeat: no-repeat;
-        background-position: right 0.75rem center;
-        background-size: 1.2em;
-        padding-right: 2.5rem !important;
-      }
-      select.form-select.service-select::-ms-expand {
-        display: none;
+
+      /* Card Container Styling */
+      .order-card-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
       }
 
-      .service-selector-group .btn-danger {
-        background-color:rgb(151, 48, 48) !important;
-        color:#fff !important;
-        border: none !important;
+      .order-card-container .card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px rgba(57, 92, 88, 0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
       }
-      .service-selector-group .btn-danger:hover,
-      .service-selector-group .btn-danger:focus {
-        background-color:rgb(151, 48, 48) !important;
-        color: #fff;
-        border: none !important;
+
+      .order-card-container .card:hover {
+        box-shadow: 0 15px 40px rgba(57, 92, 88, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .card-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #395C58;
+        letter-spacing: -0.5px;
+      }
+
+      .card-title i {
+        color: #395C58;
+        font-size: 1.3rem;
+      }
+
+      /* Header styling */
+      .card .d-flex.justify-content-between {
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #E6F7F5;
+        margin-bottom: 2rem !important;
+      }
+
+      /* Form section styling */
+      .form-label {
+        color: #2C4744 !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.75rem !important;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* Enhanced button styling */
+      .btn.filter-btn {
+        border-radius: 0.75rem !important;
+        padding: 0.5rem 1.25rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+      }
+
+      .btn.filter-btn:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+      }
+
+      #placeOrderBtn {
+        border-radius: 0.75rem !important;
+        padding: 1rem 2rem !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(57, 92, 88, 0.3) !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      #placeOrderBtn:hover:not(:disabled) {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(57, 92, 88, 0.4) !important;
+      }
+
+      #placeOrderBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+        box-shadow: 0 2px 8px rgba(57, 92, 88, 0.1) !important;
+      }
+
+      /* Subtotal and Total styling */
+      #totalAmount {
+        color: #395C58 !important;
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      }
+
+      /* Input focus enhancement */
+      .form-control:focus,
+      .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(57, 92, 88, 0.15) !important;
+        transform: translateY(-1px);
+        transition: all 0.2s ease;
+      }
+
+      /* Service selector group styling */
+      .service-selector-group {
+        background: rgba(209, 234, 231, 0.3);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem !important;
+        border: 1px solid rgba(57, 92, 88, 0.1);
+        transition: all 0.2s ease;
+      }
+
+      .service-selector-group:hover {
+        background: rgba(209, 234, 231, 0.5);
+        border-color: rgba(57, 92, 88, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(57, 92, 88, 0.1);
+      }
+
+      /* Service counter styling */
+      .service-counter-group {
+        background: rgba(209, 234, 231, 0.3);
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(57, 92, 88, 0.1);
+        transition: all 0.2s ease;
+      }
+
+      .service-counter-group:hover {
+        background: rgba(209, 234, 231, 0.5);
+        border-color: rgba(57, 92, 88, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(57, 92, 88, 0.1);
+      }
+
+      .counter-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50% !important;
+        border: 2px solid #395C58 !important;
+        color: #395C58 !important;
+        background: white !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease !important;
+      }
+
+      .counter-btn:hover {
+        background: #395C58 !important;
+        color: white !important;
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(57, 92, 88, 0.3) !important;
+      }
+
+      .service-counter {
+        border: 2px solid #395C58 !important;
+        background: white !important;
+        color: #395C58 !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+      }
+
+      .service-counter:focus {
+        box-shadow: 0 0 0 0.25rem rgba(57, 92, 88, 0.15) !important;
+        border-color: #395C58 !important;
+      }
+
+      .service-counter-group h6 {
+        color: #2C4744 !important;
+        margin-bottom: 0.25rem !important;
+      }
+
+      .service-counter-group .text-muted {
+        color: #75908E !important;
+        font-weight: 500;
+      }
+
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .order-card-container {
+          margin: 1rem auto;
+          padding: 0 0.5rem;
+        }
+        
+        .order-card-container .card {
+          border-radius: 0.75rem;
+          padding: 1.5rem !important;
+        }
+        
+        .card-title {
+          font-size: 1.25rem;
+        }
+        
+        .service-counter-group {
+          padding: 1rem;
+        }
+        
+        .counter-btn {
+          width: 35px;
+          height: 35px;
+        }
       }
     </style>
   </head>
@@ -279,54 +463,60 @@ if (isset($_POST['placeOrderBtn'])) {
         <form id="orderForm" method="POST" action="">
           <div class="mb-3">
 
-            <!-- Customer Selection -->
-            <label for="customerInput" class="form-label fw-bold">Customer Selection</label>
-            <div class="dropdown-arrow-wrapper" style="position:relative;">
-              <input class="form-control custom-dropdown" list="customerList" id="customerInput" placeholder="Type to search customer" autocomplete="off">
-              <button type="button" class="dropdown-btn" tabindex="-1" id="customerDropdownBtn">
-                <i class="fa fa-chevron-down"></i>
-              </button>
-              <div class="custom-dropdown-list" id="customerDropdownList">
+            <!-- Customer Name Input -->
+            <label for="customerNameInput" class="form-label fw-bold">Customer Name</label>
+            <input type="text" class="form-control" id="customerNameInput" name="customerName" placeholder="Enter customer name" required autocomplete="off">
+            <!-- End of Customer Name Input -->
+          </div>
 
-                <?php
-                // Fetch customers from the database
-                $customers = $con->getAllCustomers();
-                if ($customers) {
-                ?>
-                  
-                <?php
-                foreach ($customers as $customer) {
-                    echo '<div class="dropdown-item" 
-                              data-customer-id="' . htmlspecialchars($customer['CustomerID']) . '">'
-                              . htmlspecialchars($customer['CustomerID']) . ' - '
-                              . htmlspecialchars($customer['FullName']) 
-                              . '</div>';
-                }
-                } else {
-                  echo '<div class="dropdown-item">No customers available.</div>';
-                }
-                ?>
+          <!-- Service Selection -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Services</label>
+            
+            <!-- Regular Service Counter -->
+            <div class="service-counter-group mb-3">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <h6 class="mb-1 fw-bold">Regular Service</h6>
+                  <small class="text-muted">₱120.00 per load</small>
+                </div>
+                <div class="d-flex align-items-center">
+                  <button type="button" class="btn btn-outline-secondary btn-sm counter-btn" data-action="decrease" data-service="regular">
+                    <i class="fa fa-minus"></i>
+                  </button>
+                  <input type="number" class="form-control mx-2 text-center service-counter" 
+                         id="regularServiceCount" min="0" value="0" style="width: 80px;" readonly>
+                  <button type="button" class="btn btn-outline-secondary btn-sm counter-btn" data-action="increase" data-service="regular">
+                    <i class="fa fa-plus"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Hidden input to store selected customer ID -->
-            <input type="hidden" name="selectedCustomerId" id="selectedCustomerIdInput">
-
-            <!-- End of Customer Selection -->
+            <!-- Extra Heavy Load Counter -->
+            <div class="service-counter-group mb-3">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <h6 class="mb-1 fw-bold">Extra Heavy Load</h6>
+                  <small class="text-muted">₱175.00 per load</small>
+                </div>
+                <div class="d-flex align-items-center">
+                  <button type="button" class="btn btn-outline-secondary btn-sm counter-btn" data-action="decrease" data-service="heavy">
+                    <i class="fa fa-minus"></i>
+                  </button>
+                  <input type="number" class="form-control mx-2 text-center service-counter" 
+                         id="heavyServiceCount" min="0" value="0" style="width: 80px;" readonly>
+                  <button type="button" class="btn btn-outline-secondary btn-sm counter-btn" data-action="increase" data-service="heavy">
+                    <i class="fa fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Service Type Selection -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Service Type(s)</label>
-            <div id="serviceSelectors"></div>
-            <button type="button" id="addServiceBtn" class="btn btn-outline-primary btn-sm mt-2"
-              style="background: #395C58; color: #fff; border-color: #395C58;">
-              <i class="fa fa-plus"></i> Add Another Service
-            </button>
-          </div>
-
-          <!-- Hidden input to store selected services -->
-          <input type="hidden" name="selectedServices" id="selectedServicesInput">
+          <!-- Hidden inputs to store service counts -->
+          <input type="hidden" name="regularServiceCount" id="regularServiceCountInput">
+          <input type="hidden" name="heavyServiceCount" id="heavyServiceCountInput">
 
           <div class="mb-3">
 
@@ -361,26 +551,6 @@ if (isset($_POST['placeOrderBtn'])) {
             <!-- End of Payment Method Selection -->
           </div>
 
-          <!-- Subtotal Display -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Subtotal</label>
-            <div>
-              <span id="orderSubtotal" name="subtotal" class="fs-5 fw-semibold">₱0.00</span>
-            </div>
-          </div>
-
-            <!-- Hidden input to store subtotal -->
-            <input type="hidden" name="subtotal" id="subtotalInput">
-
-          <!-- End of Subtotal Display -->
-
-          <!-- Discount Input -->
-          <div class="mb-3">
-            <label for="discountInput" class="form-label fw-bold">Discount (₱)</label>
-            <input type="number" class="form-control" id="discountInput" name="discount" value="0" min="0" step="0.01" placeholder="Enter discount amount">
-          </div>
-          <!-- End of Discount Input -->
-
           <!-- Total Amount Display -->
           <div class="mb-3">
             <label class="form-label fw-bold">Total Amount</label>
@@ -410,81 +580,63 @@ if (isset($_POST['placeOrderBtn'])) {
 
     <script>
 
-      // Dropdown logic for customer
-      const customerInput = document.getElementById('customerInput');
-      const customerDropdownBtn = document.getElementById('customerDropdownBtn');
+      // Customer name input validation
+      const customerNameInput = document.getElementById('customerNameInput');
 
-      // Create dropdown list element
-      // selectedCustomerId will hold the ID of the selected customer
-      let selectedCustomerId = null;
-      // Get the dropdown list element
-      customerDropdownList.addEventListener('mousedown', function(e) {
-        // Check if the clicked element is a dropdown item
-        // If so, update the input value and close the dropdown
-        if (e.target.classList.contains('dropdown-item')) {
-          customerInput.value = e.target.textContent;
-          // Set the selected customer ID from the data attribute
-          selectedCustomerId = e.target.getAttribute('data-customer-id');
-          customerDropdownList.classList.remove('show');
-          customerInput.dispatchEvent(new Event('input'));
-        }
-      });
+      // Service pricing
+      const servicePrices = {
+        regular: 120.00,
+        heavy: 175.00
+      };
 
-      // Handle click on dropdown button to toggle visibility
-      customerDropdownBtn.addEventListener('click', function(e) {
-        customerDropdownList.classList.toggle('show');
-      });
-
-      // Close dropdown when clicking outside
-      document.addEventListener('mousedown', function(e) {
-        if (!customerDropdownList.contains(e.target) && e.target !== customerDropdownBtn && e.target !== customerInput) {
-          customerDropdownList.classList.remove('show');
-        }
-      });
-
-              // Optionally, filter dropdown as user types
-              customerInput.addEventListener('input', function() {
-                const val = this.value.toLowerCase();
-                Array.from(customerDropdownList.children).forEach(function(item) {
-                  item.style.display = item.textContent.toLowerCase().includes(val) ? '' : 'none';
-                });
-              });
-
-      // Dropdown logic for service
-      const servicesData = [
-        <?php
-          // Output a JS array of services for use in dropdowns
-          $services = $con->getAllServices();
-
-          // Initialize an array to hold service data
-          $jsArray = [];
-
-          // Loop through each service and format it for JS
-          if ($services) {
-            foreach ($services as $service) {
-              // Determine service type name based on ServiceType
-              $typeName = '';
-              // 1 = Full Service & Drop-Off, 2 = Self-Service
-              if ($service['ServiceType'] == 1) $typeName = 'Full Service & Drop-Off';
-              elseif ($service['ServiceType'] == 2) $typeName = 'Self-Service';
-              // Add to JS array
-              // Ensure all fields are set, otherwise use default values
-              $jsArray[] = [
-                'id' => $service['LaundryID'],
-                'name' => $service['ServiceName'] ?? '',
-                'type' => $typeName,
-                'price' => $service['Price'] ?? 0
-              ];
-            }
-          }
-          // Output the JS array as a JSON string
-          echo implode(",", array_map(function($s) {
-            return json_encode($s);
-          }, $jsArray));
-        ?>
-      ];
+      // Counter functionality
+      const regularCounter = document.getElementById('regularServiceCount');
+      const heavyCounter = document.getElementById('heavyServiceCount');
+      const totalAmount = document.getElementById('totalAmount');
       
-      // Create a custom dropdown list for payment methods
+      // Handle counter button clicks
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('.counter-btn')) {
+          const btn = e.target.closest('.counter-btn');
+          const action = btn.getAttribute('data-action');
+          const service = btn.getAttribute('data-service');
+          
+          let counter;
+          if (service === 'regular') {
+            counter = regularCounter;
+          } else if (service === 'heavy') {
+            counter = heavyCounter;
+          }
+          
+          let currentValue = parseInt(counter.value) || 0;
+          
+          if (action === 'increase') {
+            counter.value = currentValue + 1;
+          } else if (action === 'decrease' && currentValue > 0) {
+            counter.value = currentValue - 1;
+          }
+          
+          updateTotal();
+          validateOrderForm();
+        }
+      });
+      
+      // Function to update total based on service counts
+      function updateTotal() {
+        const regularCount = parseInt(regularCounter.value) || 0;
+        const heavyCount = parseInt(heavyCounter.value) || 0;
+        
+        const total = (regularCount * servicePrices.regular) + (heavyCount * servicePrices.heavy);
+        
+        totalAmount.textContent = '₱' + total.toFixed(2);
+        document.getElementById('totalAmountInput').value = total.toFixed(2);
+        
+        // Update hidden inputs
+        document.getElementById('regularServiceCountInput').value = regularCount;
+        document.getElementById('heavyServiceCountInput').value = heavyCount;
+      }
+
+      // Payment method functionality
       const paymentMethodInput = document.getElementById('paymentMethodInput');
       const paymentMethodDropdownList = document.getElementById('paymentMethodDropdownList');
       const selectedPaymentMethodIdInput = document.getElementById('selectedPaymentMethodIdInput');
@@ -520,7 +672,7 @@ if (isset($_POST['placeOrderBtn'])) {
         }
       });
 
-      // Optionally clear the hidden input if the user types a value that doesn't match any method
+      // Filter payment methods based on input
       paymentMethodInput.addEventListener('input', function() {
         const val = this.value.toLowerCase();
         Array.from(paymentMethodDropdownList.children).forEach(function(item) {
@@ -529,154 +681,34 @@ if (isset($_POST['placeOrderBtn'])) {
         paymentMethodDropdownList.classList.add('show');
       });
 
-      // Create service selectors dynamically
-      const serviceSelectorsDiv = document.getElementById('serviceSelectors');
-      const addServiceBtn = document.getElementById('addServiceBtn');
-      const orderSubtotal = document.getElementById('orderSubtotal');
-      
-      // Function to create a new service selector
-      function createServiceSelector(idx) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'input-group mb-2 service-selector-group';
-    
-      // Service dropdown
-      const select = document.createElement('select');
-      select.className = 'form-select service-select';
-      select.style.maxWidth = '60%';
-      select.innerHTML = '<option value="">Select a service...</option>' +
-        servicesData.map((s, i) =>
-          `<option value="${i}"><strong>${s.type}</strong> | ${s.name} (₱${parseFloat(s.price).toFixed(2)})</option>`
-        ).join('');
-    
-      // Quantity input
-      const qtyInput = document.createElement('input');
-      qtyInput.type = 'number';
-      qtyInput.className = 'form-control ms-2 service-qty';
-      qtyInput.min = 1;
-      qtyInput.value = 1;
-      qtyInput.style.maxWidth = '80px';
-    
-      // Remove button
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn btn-danger btn-sm ms-2';
-      removeBtn.innerHTML = '<i class="fa fa-times"></i>';
-      removeBtn.onclick = function() {
-        wrapper.remove();
-        updateSubtotal();
-        validateOrderForm();
-      };
-    
-      wrapper.appendChild(select);
-      wrapper.appendChild(qtyInput);
-      wrapper.appendChild(removeBtn);
-    
-      // Update subtotal when service or quantity changes
-      select.addEventListener('change', updateSubtotal);
-      qtyInput.addEventListener('input', updateSubtotal);
-    
-      return wrapper;
-    }
-      
-      // Function to update subtotal based on selected services
-      function updateSubtotal() {
-        let subtotal = 0;
-        const selectedIndexes = [];
-        document.querySelectorAll('.service-selector-group').forEach(group => {
-          const select = group.querySelector('.service-select');
-          const qtyInput = group.querySelector('.service-qty');
-          const idx = select.value;
-          const qty = parseInt(qtyInput.value) || 1;
-          if (idx !== '' && !selectedIndexes.includes(idx)) {
-            subtotal += (parseFloat(servicesData[idx].price) || 0) * qty;
-            selectedIndexes.push(idx);
-          }
-        });
-        orderSubtotal.textContent = '₱' + subtotal.toFixed(2);
-        updateTotalAmount();
-      }
-
-      document.getElementById('discountInput').addEventListener('input', updateTotalAmount);
-
-      // Update total amount when discount changes
-      function updateTotalAmount() {
-        // Get subtotal as a number
-        const subtotal = parseFloat(orderSubtotal.textContent.replace(/[^\d.]/g, '')) || 0;
-        // Get discount as a number
-        const discount = parseFloat(document.getElementById('discountInput').value) || 0;
-        // Calculate total (never less than 0)
-        const total = Math.max(subtotal - discount, 0);
-        // Update total amount display and hidden input
-        document.getElementById('totalAmount').textContent = '₱' + total.toFixed(2);
-        document.getElementById('totalAmountInput').value = total.toFixed(2);
-      }
-      
-      // Add initial selector
-      serviceSelectorsDiv.appendChild(createServiceSelector(0));
-      
-      // Add new selector on button click
-      addServiceBtn.addEventListener('click', function() {
-        serviceSelectorsDiv.appendChild(createServiceSelector());
-      });
-
-      // Enable confirm button if at least one service is selected
+      // Form validation
       const placeOrderBtn = document.getElementById('placeOrderBtn');
       
       function validateOrderForm() {
-        // Check customer
-        const customerValid = customerInput.value.trim() !== '';
+        // Check customer name
+        const customerValid = customerNameInput.value.trim() !== '';
       
-        // Check at least one valid service selected
-        let serviceValid = false;
-        document.querySelectorAll('.service-select').forEach(select => {
-          if (select.value !== '') serviceValid = true;
-        });
+        // Check at least one service is selected
+        const regularCount = parseInt(regularCounter.value) || 0;
+        const heavyCount = parseInt(heavyCounter.value) || 0;
+        const serviceValid = (regularCount > 0) || (heavyCount > 0);
       
         const paymentMethodValid = selectedPaymentMethodIdInput.value.trim() !== '';
         placeOrderBtn.disabled = !(customerValid && serviceValid && paymentMethodValid);
       }
 
-      // Listen for changes on customer input and service selects
-      customerInput.addEventListener('input', validateOrderForm);
-      serviceSelectorsDiv.addEventListener('change', validateOrderForm);
-      
-      // Also validate on add/remove service selector
-      addServiceBtn.addEventListener('click', function() {
-        setTimeout(validateOrderForm, 0);
-      });
-      serviceSelectorsDiv.addEventListener('click', function(e) {
-        if (e.target.classList.contains('btn-danger')) {
-          setTimeout(validateOrderForm, 0);
-        }
-      });
+      // Listen for changes
+      customerNameInput.addEventListener('input', validateOrderForm);
+      regularCounter.addEventListener('input', validateOrderForm);
+      heavyCounter.addEventListener('input', validateOrderForm);
       
       // Initial validation
       validateOrderForm();
 
       // Handle form submission
       document.getElementById('orderForm').addEventListener('submit', function(e) {
-        // Get all selected services with quantities
-        const selectedServicesArr = [];
-        document.querySelectorAll('.service-selector-group').forEach(group => {
-          const select = group.querySelector('.service-select');
-          const qtyInput = group.querySelector('.service-qty');
-          if (select.value !== '') {
-            const idx = select.value;
-            selectedServicesArr.push({
-              ...servicesData[idx],
-              quantity: parseInt(qtyInput.value) || 1
-            });
-          }
-        });
-      
-        // Store as JSON in hidden input
-        document.getElementById('selectedServicesInput').value = JSON.stringify(selectedServicesArr);
-      
-        // Get values from inputs
-        document.getElementById('selectedCustomerIdInput').value = selectedCustomerId;
-        document.getElementById('subtotalInput').value = orderSubtotal.textContent.replace(/[^\d.]/g, '');
-        document.getElementById('totalAmountInput').value = document.getElementById('totalAmount').textContent.replace(/[^\d.]/g, '');
-        // DO NOT overwrite selectedPaymentMethodIdInput here!
+        // Update total amount input before submission
+        updateTotal();
       });
 
     </script>
