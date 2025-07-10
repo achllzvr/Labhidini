@@ -195,10 +195,10 @@ class database{
         // Open connection with database
         $con = $this->opencon();
 
-        // Prepare SQL statement to get Transaction data - uses TransacCustomerName from transaction table
+        // Prepare SQL statement to get Transaction data - uses CustomerName from transaction table
         $stmt = $con->prepare("SELECT 
                                 t.TransactionID,
-                                t.TransacCustomerName AS CustomerName,
+                                t.CustomerName AS CustomerName,
                                 DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
                                 GROUP_CONCAT(
                                     DISTINCT CONCAT(ls.LaundryService_Name, ' (x', td.TDQuantity, ')') 
@@ -260,7 +260,7 @@ class database{
         $con = $this->opencon();
 
         // Prepare SQL statement to get unique customer names from transactions
-        $stmt = $con->prepare("SELECT DISTINCT TransacCustomerName AS FullName FROM transaction WHERE TransacCustomerName IS NOT NULL ORDER BY TransacCustomerName");
+        $stmt = $con->prepare("SELECT DISTINCT CustomerName AS FullName FROM transaction WHERE CustomerName IS NOT NULL ORDER BY CustomerName");
         
         // Execute the statement
         $stmt->execute();
@@ -303,7 +303,7 @@ class database{
 
             // Prepare SQL statement to insert a new Transaction with customer name
             $stmt = $con->prepare("INSERT INTO transaction 
-                                    (TransacCustomerName, UA_ID, PaymentMethodID, StatusID, TransacSubtotal, TransacDiscount, TransacTotalAmount) 
+                                    (CustomerName, UA_ID, PaymentMethodID, StatusID, TransacSubTotal, TransacDiscount, TransacTotalAmount) 
                                     VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$customerName, $admin_id, $paymentMethodID, 1, $subtotal, $discount, $totalAmount]);
 
@@ -372,7 +372,7 @@ class database{
         $con = $this->opencon();
 
         // Prepare SQL statement to get the latest Transaction ID for a specific Customer by name
-        $stmt = $con->prepare("SELECT TransactionID FROM transaction WHERE TransacCustomerName = ? ORDER BY TransactionTimestamp DESC LIMIT 1");
+        $stmt = $con->prepare("SELECT TransactionID FROM transaction WHERE CustomerName = ? ORDER BY TransactionTimestamp DESC LIMIT 1");
         
         // Execute the statement
         $stmt->execute([$customerName]);
@@ -414,7 +414,7 @@ class database{
         $con = $this->opencon();
 
         // Prepare SQL statement to get unique customer names from transactions
-        $stmt = $con->prepare("SELECT DISTINCT TransacCustomerName AS FullName FROM transaction WHERE TransacCustomerName IS NOT NULL ORDER BY TransacCustomerName");
+        $stmt = $con->prepare("SELECT DISTINCT CustomerName AS FullName FROM transaction WHERE CustomerName IS NOT NULL ORDER BY CustomerName");
         
         // Execute the statement
         $stmt->execute();
@@ -532,10 +532,10 @@ class database{
             // Open connection with database
             $con = $this->opencon();
 
-            // Base query - uses TransacCustomerName from transaction table (no customer table join needed)
+            // Base query - uses CustomerName from transaction table
             $query = "SELECT 
                         t.TransactionID,
-                        t.TransacCustomerName AS CustomerName,
+                        t.CustomerName AS CustomerName,
                         DATE_FORMAT(t.TransactionTimestamp, '%M %d, %Y') AS FormattedDate,
                         GROUP_CONCAT(
                             DISTINCT CONCAT(ls.LaundryService_Name, ' (x', td.TDQuantity, ')') 
@@ -594,7 +594,7 @@ class database{
 
             // Search term filter (Customer name or Transaction ID)
             if (!empty($searchTerm)) {
-                $query .= " AND (t.TransacCustomerName LIKE ? OR t.TransactionID LIKE ?)";
+                $query .= " AND (t.CustomerName LIKE ? OR t.TransactionID LIKE ?)";
                 $searchParam = '%' . $searchTerm . '%';
                 $params[] = $searchParam;
                 $params[] = $searchParam;
